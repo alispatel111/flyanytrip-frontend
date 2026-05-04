@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { 
   tourDestinations, 
@@ -74,7 +74,7 @@ export const useSearchState = () => {
     setFetchingFares(true);
     try {
       const formattedDate = date instanceof Date ? date.toISOString().split('T')[0] : date;
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/flights/calendar-fare`, {
+      const response = await api.get('/api/flights/calendar-fare', {
         params: {
           origin: from.iata,
           destination: to.iata,
@@ -106,7 +106,7 @@ export const useSearchState = () => {
       return;
     }
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/flights/locations`, {
+      const response = await api.get('/api/flights/locations', {
         params: { term: query }
       });
       if (response.data.success && response.data.data.airports) {
@@ -188,7 +188,7 @@ export const useSearchState = () => {
 
     if (activeTab === 'flights') {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/flights/search`, {
+        const response = await api.get('/api/flights/search', {
           params: {
             origin: from.iata,
             destination: to.iata,
