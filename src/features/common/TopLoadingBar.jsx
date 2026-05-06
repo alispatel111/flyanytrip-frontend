@@ -39,38 +39,38 @@ const TopLoadingBar = ({ searching }) => {
         >
           {/* Track Background */}
           <div className="absolute inset-0 bg-brand-red/5" />
-          
+
           {/* Progress Bar */}
           <motion.div
             className="absolute top-0 bottom-0 left-0 bg-brand-red shadow-[0_0_8px_rgba(239,68,68,0.5)]"
             initial={{ width: "0%" }}
             animate={{ width: `${progress}%` }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 35, 
+            transition={{
+              type: "spring",
+              stiffness: 35,
               damping: 12,
-              duration: progress === 100 ? 0.2 : 0.8 
+              duration: progress === 100 ? 0.2 : 0.8
             }}
           >
             {/* Realistic Airplane with Smoke Effect */}
             <div className="absolute right-[-14px] top-1/2 -translate-y-1/2 flex items-center">
-              
+
               {/* Dynamic Smoke Effect */}
               <div className="absolute right-[40px] top-1/2 -translate-y-1/2 flex gap-1 pointer-events-none">
                 {[...Array(4)].map((_, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0.6, scale: 0.4, x: 0 }}
-                    animate={{ 
-                      opacity: 0, 
-                      scale: 2, 
+                    animate={{
+                      opacity: 0,
+                      scale: 2,
                       x: -30 - (i * 12),
                     }}
-                    transition={{ 
-                      duration: 0.6, 
-                      repeat: Infinity, 
+                    transition={{
+                      duration: 0.6,
+                      repeat: Infinity,
                       delay: i * 0.15,
-                      ease: "easeOut" 
+                      ease: "easeOut"
                     }}
                     className="w-2.5 h-2.5 bg-brand-red/30 rounded-full blur-[2px]"
                   />
@@ -79,9 +79,9 @@ const TopLoadingBar = ({ searching }) => {
 
               {/* Airplane Image */}
               <div className="relative z-10">
-                <img 
-                  src="/assets/airplane-v2.png" 
-                  alt="Flight" 
+                <img
+                  src="/assets/airplane-transparent.png"
+                  alt="Flight"
                   className="w-14 h-auto drop-shadow-md mix-blend-multiply brightness-110"
                   style={{ transform: "rotateY(180deg)" }}
                 />
