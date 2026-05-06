@@ -58,6 +58,8 @@ const AppRoutes = () => {
       <Route path="/hotels" element={<HotelHome />} />
       <Route path="/tours" element={<TourHome />} />
       <Route path="/results" element={<SearchResults />} />
+      <Route path="/flights/search" element={<SearchResults />} />
+      <Route path="/flights/:route" element={<SearchResults />} />
       <Route path="/tours/:id" element={<TourDetails />} />
 
       {/* Flight Flow Routes */}

@@ -163,8 +163,8 @@ const FlightSearch = ({
                           <span className="text-[10px] font-black text-brand-black/60 tracking-wider">{a.iata}</span>
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-bold text-brand-black truncate">{a.name}</span>
-                          <span className="text-[10px] font-semibold text-brand-black/40">{a.city}</span>
+                          <span className="text-xs font-bold text-brand-black truncate">{a.city}, {a.country}</span>
+                          <span className="text-[10px] font-semibold text-brand-black/40 truncate">{a.name}</span>
                         </div>
                       </div>
                     ))}
@@ -214,8 +214,8 @@ const FlightSearch = ({
                           <span className="text-[10px] font-black text-brand-black/60 tracking-wider">{a.iata}</span>
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-bold text-brand-black truncate">{a.name}</span>
-                          <span className="text-[10px] font-semibold text-brand-black/40">{a.city}</span>
+                          <span className="text-xs font-bold text-brand-black truncate">{a.city}, {a.country}</span>
+                          <span className="text-[10px] font-semibold text-brand-black/40 truncate">{a.name}</span>
                         </div>
                       </div>
                     ))}
@@ -388,8 +388,8 @@ const FlightSearch = ({
                           <span className="text-[11px] font-black text-brand-black/60 group-hover:text-brand-red tracking-wider transition-colors">{a.iata}</span>
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-bold text-brand-black group-hover:text-brand-red transition-colors truncate">{a.name}</span>
-                          <span className="text-[11px] font-semibold text-brand-black/40 group-hover:text-brand-red/60 transition-colors">{a.city} &bull; {a.country}</span>
+                          <span className="text-sm font-bold text-brand-black group-hover:text-brand-red transition-colors truncate">{a.city}, {a.country}</span>
+                          <span className="text-[11px] font-semibold text-brand-black/40 group-hover:text-brand-red/60 transition-colors truncate">{a.name}</span>
                         </div>
                       </div>
                     ))}
@@ -467,8 +467,8 @@ const FlightSearch = ({
                           <span className="text-[11px] font-black text-brand-black/60 group-hover:text-brand-red tracking-wider transition-colors">{a.iata}</span>
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-bold text-brand-black group-hover:text-brand-red transition-colors truncate">{a.name}</span>
-                          <span className="text-[11px] font-semibold text-brand-black/40 group-hover:text-brand-red/60 transition-colors">{a.city} &bull; {a.country}</span>
+                          <span className="text-sm font-bold text-brand-black group-hover:text-brand-red transition-colors truncate">{a.city}, {a.country}</span>
+                          <span className="text-[11px] font-semibold text-brand-black/40 group-hover:text-brand-red/60 transition-colors truncate">{a.name}</span>
                         </div>
                       </div>
                     ))}

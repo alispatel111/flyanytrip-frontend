@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useSearchContext } from '../context/SearchContext';
 import ResultsSection from '../features/common/ResultsSection';
+import TopLoadingBar from '../features/common/TopLoadingBar';
 import FlightSearch from '../features/flights/FlightSearch';
 import TourSearch from '../features/tours/TourSearch';
 import VisaSearch from '../features/visa/VisaSearch';
@@ -80,6 +81,7 @@ const SearchResults = () => {
             {ActiveSearch && <ActiveSearch {...searchState} isCompact={true} />}
           </div>
         </div>
+        <TopLoadingBar searching={searching} />
       </motion.div>
       
       {/* Search Results */}

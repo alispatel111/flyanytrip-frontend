@@ -16,6 +16,42 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plane, Compass, Globe2, MapPin, ShieldCheck, ArrowRightLeft, Search, X, ChevronUp } from 'lucide-react';
 import FlightFilters from '../flights/FlightFilters';
 import FlightSortBar from '../flights/FlightSortBar';
+import { useSearchContext } from '../../context/SearchContext';
+
+const AirlineLogo = ({ airlineCode, airlineName }) => {
+  const [hasError, setHasError] = React.useState(false);
+  const [useFallback, setUseFallback] = React.useState(false);
+
+  if (!airlineCode || hasError) {
+    return (
+      <div className="w-16 h-16 bg-brand-red/5 text-brand-red rounded-xl flex items-center justify-center shrink-0">
+        <Plane size={32} />
+      </div>
+    );
+  }
+
+  const logoSrc = useFallback 
+    ? `https://daisycon.io/images/airline/?width=200&height=200&color=ffffff&iata=${airlineCode}`
+    : `/assets/airlines/${airlineCode}.png`;
+
+  return (
+    <div className="w-16 h-16 rounded-xl flex items-center justify-center shrink-0 bg-white border border-black/5 overflow-hidden shadow-sm">
+      <img 
+        src={logoSrc} 
+        alt={airlineName}
+        className="w-full h-full object-contain p-1"
+        loading="lazy"
+        onError={() => {
+          if (!useFallback) {
+            setUseFallback(true);
+          } else {
+            setHasError(true);
+          }
+        }}
+      />
+    </div>
+  );
+};
 
 const FlightSkeleton = () => (
   <div className="bg-white rounded-3xl border border-black/5 shadow-sm overflow-hidden transition-all">
@@ -66,61 +102,71 @@ const ResultCard = ({ r, navigate }) => (
     {r.type === 'flight' && (
       <div className="flex flex-col h-full">
         <div className="flex flex-col md:flex-row flex-1">
-          <div className="p-6 flex-1 flex flex-col justify-center">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-brand-red/5 text-brand-red rounded-xl flex items-center justify-center">
-                  <Plane size={20} />
-                </div>
-                <div>
-                  <div className="text-base font-bold text-brand-black">{r.airline}</div>
-                  <div className="text-xs font-semibold text-brand-black/40 uppercase tracking-widest">{r.flight}</div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <span className="bg-black/5 text-brand-black/60 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">{r.class}</span>
+          <div className="p-4 md:p-6 flex-1 flex flex-col md:flex-row items-center gap-6 md:gap-8 relative">
+            
+            {/* 1. Airline Section (Left) */}
+            <div className="flex items-center gap-4 w-full md:w-[220px] shrink-0">
+              <AirlineLogo airlineCode={r.airlineCode} airlineName={r.airline} />
+              <div className="flex flex-col">
+                <div className="text-[16px] font-bold text-brand-black leading-tight">{r.airline}</div>
+                <div className="text-[12px] font-semibold text-brand-black/40 uppercase tracking-wider mt-0.5">{r.flight}</div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-6">
-              <div className="text-right flex-1">
-                <div className="text-xl font-black text-brand-black mb-0.5">{r.time}</div>
-                <div className="text-xs font-bold text-brand-black/40 uppercase tracking-widest">{r.from}</div>
+            {/* 2. Timing Section (Center) */}
+            <div className="flex-1 flex items-center justify-between w-full mt-4 md:mt-0">
+              <div className="text-right flex flex-col items-end">
+                <div className="text-2xl font-black text-brand-black mb-1">{r.time}</div>
+                <div className="text-[13px] font-bold text-brand-black/40 uppercase tracking-widest">{r.from}</div>
               </div>
 
-              <div className="w-32 flex flex-col items-center gap-1.5">
-                <div className="text-[10px] font-extrabold uppercase tracking-widest text-brand-black/40 bg-white px-2 relative z-10">{r.dur}</div>
-                <div className="w-full h-[2px] bg-black/10 relative after:content-[''] after:absolute after:right-0 after:top-1/2 after:-translate-y-1/2 after:w-1.5 after:h-1.5 after:bg-brand-red after:rounded-full before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1.5 before:h-1.5 before:bg-brand-red/30 before:rounded-full" />
-                <div className={`text-[10px] font-bold uppercase tracking-widest ${!r.stops || r.stops === 0 || r.stops === '0' ? 'text-green-600' : 'text-amber-500'}`}>
-                  {!r.stops || r.stops === 0 || r.stops === '0' ? 'Non-stop' : r.stops === 1 || r.stops === '1' ? '1 Stop' : `${r.stops} Stops`}
+              <div className="flex-1 max-w-[200px] px-4 flex flex-col items-center justify-center gap-2">
+                <div className="text-[11px] font-extrabold uppercase tracking-widest text-brand-black/40 bg-white px-2 relative z-10">{r.dur}</div>
+                <div className="w-full h-[2px] bg-black/10 relative flex items-center">
+                  <div className="w-1.5 h-1.5 bg-brand-red/30 rounded-full absolute left-0" />
+                  {(!r.stops || r.stops === 0 || r.stops === '0') ? null : (
+                     <div className="w-1.5 h-1.5 bg-amber-500 rounded-full absolute left-1/2 -translate-x-1/2 z-10" />
+                  )}
+                  <div className="w-1.5 h-1.5 bg-brand-red rounded-full absolute right-0" />
+                </div>
+                <div className={`text-[10px] font-bold uppercase tracking-widest whitespace-nowrap text-center ${!r.stops || r.stops === 0 || r.stops === '0' ? 'text-green-600' : 'text-amber-500'}`}>
+                  {r.layover ? r.layover : (!r.stops || r.stops === 0 || r.stops === '0' ? 'Non-stop' : r.stops === 1 || r.stops === '1' ? '1 Stop' : `${r.stops} Stops`)}
                 </div>
               </div>
 
-              <div className="text-left flex-1">
-                <div className="text-xl font-black text-brand-black mb-0.5">{r.arrival}</div>
-                <div className="text-xs font-bold text-brand-black/40 uppercase tracking-widest">{r.to}</div>
+              <div className="text-left flex flex-col items-start">
+                <div className="text-2xl font-black text-brand-black mb-1">{r.arrival}</div>
+                <div className="text-[13px] font-bold text-brand-black/40 uppercase tracking-widest">{r.to}</div>
               </div>
+            </div>
+
+            {/* Class Tag (Absolute on desktop right side) */}
+            <div className="hidden lg:block absolute top-6 right-6">
+               <span className="bg-black/[0.04] text-brand-black/60 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider">{r.class}</span>
             </div>
           </div>
 
-          <div className="bg-black/[0.02] border-l border-black/5 p-6 w-full md:w-56 flex flex-col justify-center items-center text-center group-hover:bg-brand-red/[0.02] transition-colors">
+          {/* 3. Price & CTA Section (Right) */}
+          <div className="border-t md:border-t-0 md:border-l border-black/5 p-4 md:p-6 w-full md:w-[220px] shrink-0 flex flex-col justify-center items-center text-center group-hover:bg-brand-red/[0.01] transition-colors relative">
             <div className="text-[10px] font-bold text-brand-black/40 uppercase tracking-wider mb-1">Per person</div>
-            <div className="text-2xl font-black text-brand-black mb-4">₹{r.price}</div>
+            <div className="text-[26px] font-black text-brand-black mb-4 leading-none">₹{r.price}</div>
             <button 
               onClick={() => navigate('/booking-review')}
-              className="w-full bg-brand-black text-white py-3 rounded-xl text-sm font-bold transition-all hover:bg-brand-red hover:shadow-lg active:scale-95"
+              className="w-full bg-brand-black text-white h-11 rounded-xl text-sm font-bold shadow-md hover:bg-brand-red hover:shadow-lg transition-all active:scale-95 whitespace-nowrap"
             >
               Select Flight
             </button>
           </div>
         </div>
-        <div className="bg-brand-red/5 px-6 py-2.5 flex flex-wrap gap-2 items-center justify-between border-t border-brand-red/10 mt-auto">
-          <div className="text-[10px] font-bold text-brand-red uppercase tracking-wider">
+
+        {/* 4. Extra Info Row (Bottom) */}
+        <div className="bg-[#FFF8F8] border-t border-brand-red/10 px-4 md:px-6 py-3 flex flex-wrap gap-2 items-center justify-between mt-auto">
+          <div className="text-[11px] font-bold text-brand-red uppercase tracking-wider">
             {r.promo || 'Use Code FLYNEW for 10% OFF'}
           </div>
-          <div className="text-[10px] font-bold text-brand-black/50 uppercase tracking-wider flex gap-4">
-            <span className="flex items-center gap-1.5">🧳 {r.baggage || '15 Kgs Check-in'}</span>
-            <span className="flex items-center gap-1.5">🛡️ Partially Refundable</span>
+          <div className="text-[10px] font-bold text-brand-black/50 uppercase tracking-wider flex flex-wrap gap-4">
+            <span className="flex items-center gap-1.5">🧳 {r.baggage || '15 KGS CHECK-IN'}</span>
+            <span className="flex items-center gap-1.5 text-[#448AFF]">🛡️ PARTIALLY REFUNDABLE</span>
           </div>
         </div>
       </div>
@@ -228,20 +274,12 @@ const ResultCard = ({ r, navigate }) => (
  * @param activeTab - The current search tab (e.g. 'flights', 'tours')
  * @param searching - Whether a search is currently in progress
  */
-const ResultsSection = ({ results, activeTab, searching }) => {
-  const navigate = useNavigate();
+const ResultsSection = () => {
+  const { results, activeTab, searching, filters, setFilters, navigate } = useSearchContext();
   const showSkeletons = searching && activeTab === 'flights';
   const skeletonArray = Array(6).fill(0);
 
   // Filter & Sort State
-  const [filters, setFilters] = React.useState({
-    priceRange: [0, 100000],
-    airlines: [],
-    depTime: [],
-    arrTime: [],
-    stops: [],
-    duration: 100
-  });
   const [sortOption, setSortOption] = React.useState('cheapest');
   const [quickFilters, setQuickFilters] = React.useState([]);
   const [showMobileFilters, setShowMobileFilters] = React.useState(false);
@@ -342,7 +380,7 @@ const ResultsSection = ({ results, activeTab, searching }) => {
 
   return (
     <AnimatePresence>
-      {(results.length > 0 || showSkeletons) && (
+      {(results.length > 0 || searching || activeTab === 'flights') && (
         <motion.section key="results-main-section" id="search-results-section" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-[#FBFBFB] min-h-screen">
           <div className="w-full py-8 px-6 xl:px-10">
             <div className="flex justify-between items-end mb-6 border-b border-black/5 pb-3">
@@ -407,18 +445,35 @@ const ResultsSection = ({ results, activeTab, searching }) => {
                   />
                   
                   <div className="flex flex-col gap-6">
-                    {showSkeletons ? (
+                    {searching ? (
                       skeletonArray.map((_, idx) => <FlightSkeleton key={`skeleton-${idx}`} />)
-                    ) : displayResults.length === 0 ? (
-                      <div className="text-center py-20 bg-white rounded-3xl border border-black/5">
-                        <Plane size={48} className="mx-auto text-brand-black/20 mb-4" />
-                        <h3 className="text-xl font-bold text-brand-black mb-2">No Flights Found</h3>
-                        <p className="text-brand-black/50">Try adjusting your filters or search criteria.</p>
-                      </div>
-                    ) : (
+                    ) : displayResults.length > 0 ? (
                       displayResults.map((r, idx) => (
-                        <ResultCard key={`flight-${idx}-${r.id || 'new'}`} r={r} navigate={navigate} />
+                        <motion.div
+                          key={`flight-${idx}-${r.id || 'new'}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.03 }}
+                        >
+                          <ResultCard r={r} navigate={navigate} />
+                        </motion.div>
                       ))
+                    ) : (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-center py-24 bg-white rounded-3xl border border-black/5"
+                      >
+                        <Plane size={64} className="mx-auto text-brand-black/10 mb-6" />
+                        <h3 className="text-2xl font-bold text-brand-black mb-2">No Flights Found</h3>
+                        <p className="text-brand-black/50 font-medium">Try adjusting your filters or search criteria.</p>
+                        <button 
+                          onClick={() => setFilters({ priceRange: [0, 500000], airlines: [], depTime: [], arrTime: [], stops: [], duration: 100 })}
+                          className="mt-8 text-brand-red font-bold hover:underline"
+                        >
+                          Reset All Filters
+                        </button>
+                      </motion.div>
                     )}
                   </div>
                 </div>

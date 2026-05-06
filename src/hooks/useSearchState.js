@@ -7,9 +7,10 @@
  * It also handles fetching airport data and running mock searches.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { popularAirports, hotRoutes } from '../utils/airportsData';
 import { 
   tourDestinations, 
   visaDestinations, 
@@ -25,6 +26,8 @@ import {
  */
 export const useSearchState = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   // --- Flight search state ---
   const [activeTab, setActiveTab] = useState('flights');
@@ -32,8 +35,8 @@ export const useSearchState = () => {
   const [to, setTo] = useState({ iata: 'LHR', name: 'Heathrow', city: 'London', country: 'UK' });
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState([]);
-  const [airports, setAirports] = useState([]);
-  const [filteredAirports, setFilteredAirports] = useState([]);
+  const [airports, setAirports] = useState(popularAirports);
+  const [filteredAirports, setFilteredAirports] = useState(() => popularAirports.filter(a => hotRoutes.includes(a.iata)));
   const [showFromMenu, setShowFromMenu] = useState(false);
   const [showToMenu, setShowToMenu] = useState(false);
   const [departureDate, setDepartureDate] = useState(new Date(new Date().setDate(new Date().getDate() + 1)));
@@ -47,6 +50,14 @@ export const useSearchState = () => {
   const [infants, setInfants] = useState(0);
   const [travelClass, setTravelClass] = useState('Economy');
   const [showTravelersMenu, setShowTravelersMenu] = useState(false);
+  const [filters, setFilters] = useState({
+    priceRange: [0, 500000],
+    airlines: [],
+    depTime: [],
+    arrTime: [],
+    stops: [],
+    duration: 100
+  });
 
   // --- Other tab states (tours, visa, activity, train, pnr) ---
   const [tourDest, setTourDest] = useState('');
@@ -94,33 +105,91 @@ export const useSearchState = () => {
 
   // Removed local mock fetchAirports
 
+  const searchTimeoutRef = useRef(null);
+
   /**
-   * Filters the airports list based on the user's typed query.
-   * Matches against IATA code, airport name, city, and country.
+   * Filters the airports list using the live API based on the user's typed query.
+   * Debounced by 300ms to avoid spamming the API.
+   * Ranks API results by exact match > startsWith > includes, and prioritizes hot routes.
    *
    * @param query - The text the user typed in the airport search box
    */
-  const handleAirportSearch = async (query) => {
-    if (!query || query.length < 2) {
-      setFilteredAirports(airports);
+  const handleAirportSearch = (query) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    const lowerQuery = query ? query.toLowerCase().trim() : '';
+
+    if (!lowerQuery) {
+      setFilteredAirports(popularAirports.filter(a => hotRoutes.includes(a.iata)));
       return;
     }
-    try {
-      const response = await api.get('/api/flights/locations', {
-        params: { term: query }
-      });
-      if (response.data.success && response.data.data.airports) {
-        const mappedAirports = response.data.data.airports.map(a => ({
-          iata: a.code,
-          name: a.name,
-          city: a.CityName,
-          country: a.CountryName
-        }));
-        setFilteredAirports(mappedAirports);
+
+    // 1. INSTANT LOCAL FILTERING (Shows immediately as user types partial text)
+    const localMatches = popularAirports.map(airport => {
+      let score = 0;
+      const code = airport.iata.toLowerCase();
+      const city = airport.city.toLowerCase();
+      const name = airport.name.toLowerCase();
+      
+      if (code === lowerQuery || city === lowerQuery) score += 100;
+      else if (code.startsWith(lowerQuery) || city.startsWith(lowerQuery)) score += 50;
+      else if (city.includes(lowerQuery) || name.includes(lowerQuery) || code.includes(lowerQuery)) score += 20;
+      if (hotRoutes.includes(airport.iata)) score += 10;
+      
+      return { ...airport, score };
+    })
+    .filter(a => a.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(({ score, ...rest }) => rest);
+
+    setFilteredAirports(localMatches.slice(0, 10));
+
+    // 2. DEBOUNCED LIVE API FETCH
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await api.get('/api/flights/locations', {
+          params: { term: query }
+        });
+        
+        if (response.data.success && response.data.data.airports) {
+          const mappedAirports = response.data.data.airports.map(a => ({
+            iata: a.code,
+            name: a.name,
+            city: a.CityName,
+            country: a.CountryName
+          }));
+
+          // Merge local and API results, avoiding duplicates
+          const combinedMap = new Map();
+          localMatches.forEach(a => combinedMap.set(a.iata, a));
+          mappedAirports.forEach(a => combinedMap.set(a.iata, a));
+
+          // Re-rank combined results
+          const rankedAirports = Array.from(combinedMap.values()).map(airport => {
+            let score = 0;
+            const code = airport.iata ? airport.iata.toLowerCase() : '';
+            const city = airport.city ? airport.city.toLowerCase() : '';
+            const name = airport.name ? airport.name.toLowerCase() : '';
+            
+            if (code === lowerQuery || city === lowerQuery) score += 100;
+            else if (code.startsWith(lowerQuery) || city.startsWith(lowerQuery)) score += 50;
+            else if (city.includes(lowerQuery) || name.includes(lowerQuery) || code.includes(lowerQuery)) score += 20;
+            if (hotRoutes.includes(airport.iata)) score += 10;
+            
+            return { ...airport, score };
+          })
+          .filter(a => a.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 10);
+
+          setFilteredAirports(rankedAirports.map(({ score, ...rest }) => rest));
+        }
+      } catch (error) {
+        console.error("Error fetching locations from API:", error);
       }
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-    }
+    }, 300);
   };
 
   /**
@@ -182,38 +251,28 @@ export const useSearchState = () => {
       return;
     }
 
+    if (activeTab === 'flights') {
+      const searchData = {
+        from,
+        to,
+        departureDate: departureDate instanceof Date ? departureDate.toISOString() : departureDate,
+        dateRange: dateRange.map(d => d instanceof Date ? d.toISOString() : d),
+        tripType,
+        adults,
+        children,
+        infants,
+        travelClass,
+        filters // Include filters in the URL state
+      };
+      
+      const encodedData = btoa(JSON.stringify(searchData));
+      navigate(`/flights/${from.iata}-${to.iata}?data=${encodedData}`, { replace: true });
+      return;
+    }
+
     setSearching(true);
     setResults([]);
     navigate('/results'); // Instantly redirect so skeleton loads while fetching
-
-    if (activeTab === 'flights') {
-      try {
-        const response = await api.get('/api/flights/search', {
-          params: {
-            origin: from.iata,
-            destination: to.iata,
-            departureDate: tripType === 'one' ? departureDate : dateRange[0],
-            returnDate: tripType === 'round' ? dateRange[1] : '',
-            adults,
-            children,
-            infants,
-            cabinClass: travelClass,
-            tripType
-          }
-        });
-        
-        if (response.data.success && response.data.data && response.data.data.flights) {
-          setResults(response.data.data.flights);
-        } else {
-          setSearchError('No flights found or error fetching data.');
-        }
-      } catch (error) {
-        setSearchError(error.response?.data?.message || 'Error communicating with the flight API');
-        console.error("Flight Search Error:", error);
-      }
-      setSearching(false);
-      return;
-    }
 
     // Simulate a network delay of 1.2 seconds before showing mock results
     setTimeout(() => {
@@ -240,6 +299,99 @@ export const useSearchState = () => {
       navigate('/results');
     }, 1200);
   };
+
+  // --- Automatic API Trigger on State Change (Debounced) ---
+  const autoSearchTimeoutRef = useRef(null);
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    // Only auto-trigger if we are already on a search results page
+    const isFlightSearchRoute = location.pathname.startsWith('/flights/') && location.pathname.length > 9;
+    if (!isFlightSearchRoute) return;
+
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (autoSearchTimeoutRef.current) clearTimeout(autoSearchTimeoutRef.current);
+
+    autoSearchTimeoutRef.current = setTimeout(() => {
+      console.log("Triggering auto-search with current state:", { from, to, departureDate, filters });
+      handleSearch();
+    }, 500); // 500ms debounce
+
+    return () => {
+      if (autoSearchTimeoutRef.current) clearTimeout(autoSearchTimeoutRef.current);
+    };
+  }, [from?.iata, to?.iata, departureDate, adults, children, infants, travelClass, tripType, filters]);
+
+  // Decode URL state and fetch flights if on flight search route
+  useEffect(() => {
+    // Only proceed if it's a specific flight route like /flights/DEL-LKO
+    const isFlightSearchRoute = location.pathname.startsWith('/flights/') && location.pathname.length > 9;
+    
+    if (isFlightSearchRoute) {
+      setActiveTab('flights');
+      const dataParam = searchParams.get('data');
+      
+      if (dataParam) {
+        try {
+          const parsedData = JSON.parse(atob(dataParam));
+          
+          // Reconstruct state without triggering unnecessary re-renders
+          if (parsedData.from) setFrom(parsedData.from);
+          if (parsedData.to) setTo(parsedData.to);
+          if (parsedData.departureDate) setDepartureDate(new Date(parsedData.departureDate));
+          if (parsedData.dateRange) setDateRange([new Date(parsedData.dateRange[0]), new Date(parsedData.dateRange[1])]);
+          if (parsedData.tripType) setTripType(parsedData.tripType);
+          if (parsedData.adults !== undefined) setAdults(parsedData.adults);
+          if (parsedData.children !== undefined) setChildren(parsedData.children);
+          if (parsedData.infants !== undefined) setInfants(parsedData.infants);
+          if (parsedData.travelClass) setTravelClass(parsedData.travelClass);
+          if (parsedData.filters) setFilters(parsedData.filters);
+          
+          // Call API based on the parsed data
+          const fetchFlights = async () => {
+            setSearching(true);
+            setResults([]);
+            setSearchError('');
+            
+            try {
+              const response = await api.get('/api/flights/search', {
+                params: {
+                  origin: parsedData.from.iata,
+                  destination: parsedData.to.iata,
+                  departureDate: parsedData.tripType === 'one' ? parsedData.departureDate : parsedData.dateRange[0],
+                  returnDate: parsedData.tripType === 'round' ? parsedData.dateRange[1] : '',
+                  adults: parsedData.adults,
+                  children: parsedData.children,
+                  infants: parsedData.infants,
+                  cabinClass: parsedData.travelClass,
+                  tripType: parsedData.tripType
+                }
+              });
+              
+              if (response.data.success && response.data.data && response.data.data.flights) {
+                setResults(response.data.data.flights);
+              } else {
+                setSearchError('No flights found or error fetching data.');
+              }
+            } catch (error) {
+              setSearchError(error.response?.data?.message || 'Error communicating with the flight API');
+              console.error("Flight Search Error:", error);
+            }
+            setSearching(false);
+          };
+          
+          fetchFlights();
+        } catch (error) {
+          console.error("Error parsing URL params:", error);
+          setSearchError('Invalid search parameters in URL.');
+        }
+      }
+    }
+  }, [location.pathname, searchParams]);
 
   // Return all state values and handler functions for use throughout the app
   return {
@@ -274,6 +426,8 @@ export const useSearchState = () => {
     pnrNumber, setPnrNumber,
     calendarFares, fetchingFares, fetchCalendarFares,
     searchError, setSearchError,
-    handleAirportSearch, selectAirport, swapAirports, handleSearch
+    filters, setFilters,
+    handleAirportSearch, selectAirport, swapAirports, handleSearch,
+    navigate
   };
 };
