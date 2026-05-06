@@ -36,17 +36,27 @@ const SearchResults = () => {
   const { results, activeTab, searchError, searching } = searchState;
   const navigate = useNavigate();
   const [isSticky, setIsSticky] = React.useState(false);
+  const [isNavVisible, setIsNavVisible] = React.useState(true);
+  const [lastScrollY, setLastScrollY] = React.useState(0);
   
   const ActiveSearch = SearchComponents[activeTab];
 
   React.useEffect(() => {
     const handleScroll = () => {
+      const currentScrollY = window.scrollY;
       // Threshold to start full-width sticky mode (e.g., past the initial margin)
-      setIsSticky(window.scrollY > 50);
+      setIsSticky(currentScrollY > 50);
+      
+      if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        setIsNavVisible(false);
+      } else {
+        setIsNavVisible(true);
+      }
+      setLastScrollY(currentScrollY);
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [lastScrollY]);
 
   return (
     <motion.div 
@@ -59,7 +69,7 @@ const SearchResults = () => {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className={`bg-white border-b border-black/5 shadow-sm sticky top-[80px] z-[900] transition-all duration-300 ${
+        className={`bg-white border-b border-black/5 shadow-sm sticky z-[900] transition-all duration-300 ${isNavVisible ? 'top-[80px]' : 'top-0'} ${
           isSticky ? 'py-4 backdrop-blur-2xl bg-white/90 shadow-xl' : 'pt-10 pb-8 bg-white'
         }`}
       >

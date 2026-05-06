@@ -95,6 +95,8 @@ const AppRoutes = () => {
       <Route path="/otp-verification" element={<OtpVerification />} />
 
       {/* User Dashboard Routes */}
+      <Route path="/profile" element={<MyProfile />} />
+      <Route path="/my-bookings" element={<MyBookings />} />
       <Route path="/dashboard/profile" element={<MyProfile />} />
       <Route path="/dashboard/bookings" element={<MyBookings />} />
       <Route path="/dashboard/saved-travellers" element={<SavedTravellers />} />

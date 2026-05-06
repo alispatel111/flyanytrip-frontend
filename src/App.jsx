@@ -36,6 +36,8 @@ const AppContent = () => {
   );
 };
 
+import { AuthProvider } from './context/AuthContext';
+
 /**
  * Top-level App component.
  * Wraps everything in the Router (for navigation) and SearchProvider
@@ -44,9 +46,11 @@ const AppContent = () => {
 function App() {
   return (
     <Router>
-      <SearchProvider>
-        <AppContent />
-      </SearchProvider>
+      <AuthProvider>
+        <SearchProvider>
+          <AppContent />
+        </SearchProvider>
+      </AuthProvider>
     </Router>
   );
 }

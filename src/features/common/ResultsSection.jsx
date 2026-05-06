@@ -148,7 +148,7 @@ const ResultCard = ({ r, navigate }) => (
 
           {/* 3. Price & CTA Section (Right) */}
           <div className="border-t md:border-t-0 md:border-l border-black/5 p-4 md:p-6 w-full md:w-[220px] shrink-0 flex flex-col justify-center items-center text-center group-hover:bg-brand-red/[0.01] transition-colors relative">
-            <div className="text-[10px] font-bold text-brand-black/40 uppercase tracking-wider mb-1">Per person</div>
+            <div className="text-[10px] font-bold text-brand-black/40 uppercase tracking-wider mb-1">Ticket Price</div>
             <div className="text-[26px] font-black text-brand-black mb-4 leading-none">₹{r.price}</div>
             <button 
               onClick={() => navigate('/booking-review')}
@@ -241,7 +241,7 @@ const ResultCard = ({ r, navigate }) => (
           <p className="text-brand-black/60 font-medium text-sm leading-relaxed mb-6 line-clamp-2">{r.desc}</p>
           <div className="mt-auto flex items-center justify-between pt-6 border-t border-black/5">
             <div>
-              <div className="text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-1">Price per person</div>
+              <div className="text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-1">Ticket Price</div>
               <div className="text-3xl font-black text-brand-black">₹{r.price}</div>
             </div>
             <button className="bg-brand-black text-white px-8 h-12 rounded-xl font-bold transition-all hover:bg-brand-red hover:shadow-lg active:scale-95 flex items-center gap-2">

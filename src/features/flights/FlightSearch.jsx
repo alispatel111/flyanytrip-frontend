@@ -272,7 +272,7 @@ const FlightSearch = ({
             >
               <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">PASSENGER & CLASS</div>
               <div className="text-sm font-black text-brand-black truncate">
-                {adults} Adult{adults > 1 ? 's' : ''}{children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''}, {travelClass}
+                {adults + children + infants} Traveler{adults + children + infants > 1 ? 's' : ''}, {travelClass}
               </div>
             </div>
             <AnimatePresence>
@@ -284,43 +284,88 @@ const FlightSearch = ({
                 >
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold">Adults</span>
-                        <span className="text-[10px] text-black/40 font-bold uppercase tracking-wider">12+ yrs</span>
+                      <div>
+                        <div className="text-sm font-bold text-brand-black">Adults</div>
+                        <div className="text-[11px] font-semibold text-brand-black/50">Aged 12+ yrs</div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <button onClick={() => setAdults(Math.max(1, adults - 1))} className="w-8 h-8 border border-black/10 rounded-full flex items-center justify-center font-bold hover:bg-black/5 transition-colors">-</button>
-                        <span className="font-bold text-sm w-4 text-center">{adults}</span>
-                        <button onClick={() => setAdults(adults + 1)} className="w-8 h-8 border border-black/10 rounded-full flex items-center justify-center font-bold hover:bg-black/5 transition-colors">+</button>
+                        <button
+                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={() => setAdults(Math.max(1, adults - 1))}
+                          disabled={adults <= 1}
+                        >-</button>
+                        <span className="w-4 text-center font-bold text-sm">{adults}</span>
+                        <button
+                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={() => setAdults(adults + 1)}
+                          disabled={adults + children + infants >= 9}
+                        >+</button>
                       </div>
                     </div>
+
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold">Children</span>
-                        <span className="text-[10px] text-black/40 font-bold uppercase tracking-wider">2-12 yrs</span>
+                      <div>
+                        <div className="text-sm font-bold text-brand-black">Children</div>
+                        <div className="text-[11px] font-semibold text-brand-black/50">Aged 2-12 yrs</div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <button onClick={() => setChildren(Math.max(0, children - 1))} className="w-8 h-8 border border-black/10 rounded-full flex items-center justify-center font-bold hover:bg-black/5 transition-colors">-</button>
-                        <span className="font-bold text-sm w-4 text-center">{children}</span>
-                        <button onClick={() => setChildren(children + 1)} className="w-8 h-8 border border-black/10 rounded-full flex items-center justify-center font-bold hover:bg-black/5 transition-colors">+</button>
+                        <button
+                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={() => setChildren(Math.max(0, children - 1))}
+                          disabled={children <= 0}
+                        >-</button>
+                        <span className="w-4 text-center font-bold text-sm">{children}</span>
+                        <button
+                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={() => setChildren(children + 1)}
+                          disabled={adults + children + infants >= 9}
+                        >+</button>
                       </div>
                     </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-bold text-brand-black">Infants</div>
+                        <div className="text-[11px] font-semibold text-brand-black/50">Below 2 yrs</div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={() => setInfants(Math.max(0, infants - 1))}
+                          disabled={infants <= 0}
+                        >-</button>
+                        <span className="w-4 text-center font-bold text-sm">{infants}</span>
+                        <button
+                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={() => setInfants(infants + 1)}
+                          disabled={infants >= adults || adults + children + infants >= 9}
+                        >+</button>
+                      </div>
+                    </div>
+
                     <div className="pt-4 border-t border-black/5">
-                      <div className="text-[11px] font-bold mb-2 uppercase tracking-wider">Class</div>
+                      <div className="text-[11px] font-bold mb-3 uppercase tracking-wider">Travel Class</div>
                       <div className="grid grid-cols-2 gap-2">
-                        {['Economy', 'Business'].map(cls => (
+                        {['Economy', 'Premium Economy', 'Business', 'First Class'].map(cls => (
                           <button 
                             key={cls} 
-                            className={`py-2 rounded-lg text-xs font-bold transition-all ${travelClass === cls ? 'bg-[#448AFF] text-white shadow-md' : 'bg-black/5 hover:bg-black/10'}`} 
+                            className={`py-2 px-3 rounded-xl text-[12px] font-bold transition-all flex flex-col items-center justify-center leading-[1.2] min-h-[52px] ${travelClass === cls ? 'bg-[#448AFF] text-white shadow-md' : 'bg-black/5 hover:bg-black/10'}`} 
                             onClick={() => setTravelClass(cls)}
                           >
-                            {cls}
+                            {cls === 'Premium Economy' ? (
+                              <>
+                                <span>Premium</span>
+                                <span>Economy</span>
+                              </>
+                            ) : (
+                              cls
+                            )}
                           </button>
                         ))}
                       </div>
                     </div>
                     <button 
-                      className="w-full mt-2 bg-brand-black text-white py-3 rounded-xl text-xs font-bold hover:bg-brand-red transition-all active:scale-95 shadow-lg" 
+                      className="w-full mt-2 bg-brand-black text-white py-3 rounded-xl text-xs font-bold hover:bg-[#448AFF] transition-all active:scale-95 shadow-lg" 
                       onClick={() => {
                         setShowTravelersMenu(false);
                         handleSearch();
