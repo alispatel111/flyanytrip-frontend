@@ -25,8 +25,8 @@ const FlightFilters = ({ results, filters, setFilters }) => {
 
   useEffect(() => {
     // Initialize filters with actual min/max from results only once when results arrive
-    if (filters.priceRange[0] === 0 && filters.priceRange[1] === 100000 && maxBound > 0) {
-      if (minBound !== 0 || maxBound !== 100000) {
+    if (filters.priceRange[0] === 0 && filters.priceRange[1] === 500000 && maxBound > 0) {
+      if (minBound !== 0 || maxBound !== 500000) {
         setFilters(prev => ({ ...prev, priceRange: [minBound, maxBound] }));
       }
     }

@@ -59,7 +59,7 @@ const SearchResults = () => {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className={`bg-white border-b border-black/5 shadow-sm sticky top-0 z-[2000] transition-all duration-300 ${
+        className={`bg-white border-b border-black/5 shadow-sm sticky top-[80px] z-[900] transition-all duration-300 ${
           isSticky ? 'py-4 backdrop-blur-2xl bg-white/90 shadow-xl' : 'pt-10 pb-8 bg-white'
         }`}
       >

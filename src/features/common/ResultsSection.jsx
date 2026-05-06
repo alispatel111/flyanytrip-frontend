@@ -337,7 +337,14 @@ const ResultsSection = () => {
 
       if (filters.airlines.length > 0 && !filters.airlines.includes(r.airline)) return false;
 
-      const numStops = r.raw && r.raw.Segments ? r.raw.Segments[0].length - 1 : 0;
+      // Extract number of stops from r.stops or r.raw.Segments
+      let numStops = 0;
+      if (r.stops !== undefined && r.stops !== null) {
+        numStops = parseInt(r.stops, 10) || 0;
+      } else if (r.raw && r.raw.Segments) {
+        numStops = r.raw.Segments[0].length - 1;
+      }
+      
       if (filters.stops.length > 0) {
         if (!filters.stops.includes(numStops) && !(filters.stops.includes(2) && numStops >= 2)) {
           return false;

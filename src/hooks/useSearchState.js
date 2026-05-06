@@ -251,7 +251,18 @@ export const useSearchState = () => {
       return;
     }
 
+    // Reset filters for any new search to avoid stale filter conflicts
+    const initialFilters = {
+      priceRange: [0, 500000],
+      airlines: [],
+      depTime: [],
+      arrTime: [],
+      stops: [],
+      duration: 100
+    };
+
     if (activeTab === 'flights') {
+      setFilters(initialFilters);
       const searchData = {
         from,
         to,
@@ -262,7 +273,7 @@ export const useSearchState = () => {
         children,
         infants,
         travelClass,
-        filters // Include filters in the URL state
+        filters: initialFilters // Use fresh filters in the new search URL
       };
       
       const encodedData = btoa(JSON.stringify(searchData));
@@ -303,6 +314,7 @@ export const useSearchState = () => {
   // --- Automatic API Trigger on State Change (Debounced) ---
   const autoSearchTimeoutRef = useRef(null);
   const isInitialMount = useRef(true);
+  const lastFetchedQueryRef = useRef("");
 
   useEffect(() => {
     // Only auto-trigger if we are already on a search results page
@@ -324,7 +336,7 @@ export const useSearchState = () => {
     return () => {
       if (autoSearchTimeoutRef.current) clearTimeout(autoSearchTimeoutRef.current);
     };
-  }, [from?.iata, to?.iata, departureDate, adults, children, infants, travelClass, tripType, filters]);
+  }, [from?.iata, to?.iata, departureDate, tripType]);
 
   // Decode URL state and fetch flights if on flight search route
   useEffect(() => {
@@ -350,6 +362,25 @@ export const useSearchState = () => {
           if (parsedData.infants !== undefined) setInfants(parsedData.infants);
           if (parsedData.travelClass) setTravelClass(parsedData.travelClass);
           if (parsedData.filters) setFilters(parsedData.filters);
+          
+          // Create a "core" query string (excluding filters) to check if we need to re-fetch
+          const coreQuery = JSON.stringify({
+            from: parsedData.from.iata,
+            to: parsedData.to.iata,
+            date: parsedData.tripType === 'one' ? parsedData.departureDate : parsedData.dateRange[0],
+            ret: parsedData.tripType === 'round' ? parsedData.dateRange[1] : '',
+            pax: { a: parsedData.adults, c: parsedData.children, i: parsedData.infants },
+            class: parsedData.travelClass,
+            type: parsedData.tripType
+          });
+
+          // Skip fetching if the core query hasn't changed (e.g. only filters changed)
+          if (coreQuery === lastFetchedQueryRef.current && results.length > 0) {
+            console.log("Skipping API fetch - only filters changed.");
+            return;
+          }
+
+          lastFetchedQueryRef.current = coreQuery;
           
           // Call API based on the parsed data
           const fetchFlights = async () => {
