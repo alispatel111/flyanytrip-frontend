@@ -9,7 +9,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreditCard, UserCircle2, Plane, Building2, Compass, FileText, Mail, Phone, ArrowRight, X, ShieldCheck } from 'lucide-react';
+import { CreditCard, UserCircle2, Plane, Building2, Compass, FileText, Mail, Phone, ArrowRight, X, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,12 +28,18 @@ const AuthModal = ({ isOpen, onClose, type = 'personal' }) => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   if (!isOpen) return null;
   const isBusiness = type === 'business';
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!inputValue.trim()) return;
+    setIsLoading(true);
+    
+    // Simulate a brief loading animation for better UX/trust building
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     const isEmail = inputValue.includes('@');
     
@@ -51,6 +57,7 @@ const AuthModal = ({ isOpen, onClose, type = 'personal' }) => {
         };
       
     login(loginData);
+    setIsLoading(false);
     onClose();
     navigate('/profile');
   };
@@ -58,47 +65,98 @@ const AuthModal = ({ isOpen, onClose, type = 'personal' }) => {
   return (
     <div className="fixed inset-0 z-[1100] overflow-y-auto no-scrollbar">
       <div className="min-h-screen flex items-center justify-center p-4">
-        {/* Overlay */}
+        {/* Animated Overlay */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
           onClick={onClose}
-          className="fixed inset-0 bg-black/60 backdrop-blur-md"
+          className="fixed inset-0 bg-brand-black/40 backdrop-blur-md"
         />
 
         {/* Modal Box */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative bg-white rounded-[40px] shadow-2xl w-full max-w-md overflow-hidden z-10"
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="relative bg-white rounded-[40px] shadow-[0_20px_80px_-10px_rgba(0,0,0,0.3)] w-full max-w-md overflow-hidden z-10"
         >
+          {/* Animated Background Gradients inside modal for premium feel */}
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.1, 0.2, 0.1],
+                rotate: [0, 90, 0]
+              }}
+              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+              className={`absolute -top-[20%] -right-[20%] w-[70%] h-[70%] rounded-full blur-3xl ${isBusiness ? 'bg-amber-400' : 'bg-brand-red'}`}
+            />
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.3, 1],
+                opacity: [0.05, 0.1, 0.05],
+                rotate: [0, -90, 0]
+              }}
+              transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+              className={`absolute -bottom-[20%] -left-[20%] w-[70%] h-[70%] rounded-full blur-3xl ${isBusiness ? 'bg-amber-600' : 'bg-rose-500'}`}
+            />
+          </div>
+
           {/* Close Button */}
-          <div className="absolute top-6 right-6">
-            <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors group">
-              <X size={24} className="text-brand-black group-hover:rotate-90 transition-transform duration-300" />
+          <div className="absolute top-6 right-6 z-20">
+            <button onClick={onClose} className="p-2 bg-white/50 backdrop-blur-sm hover:bg-black/5 rounded-full transition-all duration-300 group">
+              <X size={20} className="text-brand-black/50 group-hover:text-brand-black group-hover:rotate-90 transition-all duration-300" />
             </button>
           </div>
 
-          <div className="p-10 pt-14">
+          <div className="relative p-10 pt-12 z-10">
             {/* Header */}
             <div className="mb-10 text-center">
-              <div className={`w-20 h-20 ${isBusiness ? 'bg-amber-500/10 text-amber-500' : 'bg-brand-red/10 text-brand-red'} rounded-3xl flex items-center justify-center mx-auto mb-6`}>
-                {isBusiness ? <ShieldCheck size={40} /> : <UserCircle2 size={40} />}
-              </div>
-              <h2 className="text-3xl font-black text-brand-black mb-2 tracking-tight">
-                {isBusiness ? 'Business Account' : 'Personal Account'}
-              </h2>
-              <p className="text-brand-black/50 font-bold uppercase text-[11px] tracking-widest">
-                {isBusiness ? 'Agent Portal Access' : 'Login or Create Account'}
-              </p>
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", delay: 0.1, bounce: 0.5 }}
+                className={`w-24 h-24 ${isBusiness ? 'bg-gradient-to-tr from-amber-500/20 to-amber-300/10 text-amber-500 shadow-amber-500/20' : 'bg-gradient-to-tr from-brand-red/20 to-rose-400/10 text-brand-red shadow-brand-red/20'} rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl relative overflow-hidden`}
+              >
+                {/* Shine effect */}
+                <motion.div 
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12"
+                />
+                {isBusiness ? <ShieldCheck size={48} strokeWidth={1.5} /> : <UserCircle2 size={48} strokeWidth={1.5} />}
+              </motion.div>
+
+              <motion.h2 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-3xl font-black text-brand-black mb-2 tracking-tight"
+              >
+                {isBusiness ? 'Agent Portal' : 'Welcome Back'}
+              </motion.h2>
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="text-brand-black/50 font-bold uppercase text-[11px] tracking-widest"
+              >
+                {isBusiness ? 'Exclusive B2B Access' : 'Sign in to continue'}
+              </motion.p>
             </div>
 
             {/* Form */}
-            <div className="space-y-6">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="space-y-6"
+            >
               <div className="relative group">
-                <label className="text-[11px] font-black uppercase tracking-widest text-brand-black/40 mb-2 block ml-1">
+                <label className={`text-[11px] font-black uppercase tracking-widest mb-2 block ml-1 transition-colors duration-300 ${isFocused ? (isBusiness ? 'text-amber-600' : 'text-brand-red') : 'text-brand-black/40'}`}>
                   {isBusiness ? 'Agent ID or Registered Email' : 'Mobile Number or Email ID'}
                 </label>
                 <div className="relative">
@@ -106,45 +164,111 @@ const AuthModal = ({ isOpen, onClose, type = 'personal' }) => {
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setIsFocused(false)}
                     placeholder="Enter your details"
-                    className={`w-full h-16 bg-black/[0.03] border-2 border-transparent focus:border-${isBusiness ? 'amber-500' : 'brand-red'}/30 focus:bg-white rounded-2xl px-6 outline-none transition-all duration-300 font-bold text-brand-black placeholder:text-brand-black/20`}
+                    className={`w-full h-16 bg-black/[0.03] border-2 focus:bg-white rounded-2xl px-6 outline-none transition-all duration-300 font-bold text-brand-black placeholder:text-brand-black/20 ${
+                      isFocused 
+                        ? (isBusiness ? 'border-amber-500 shadow-[0_0_0_4px_rgba(245,158,11,0.1)]' : 'border-brand-red shadow-[0_0_0_4px_rgba(230,30,42,0.1)]') 
+                        : 'border-transparent hover:border-black/10'
+                    }`}
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-black/5 flex items-center justify-center text-brand-black/20">
+                    <motion.div 
+                      animate={{ 
+                        backgroundColor: isFocused ? (isBusiness ? 'rgba(245,158,11,0.1)' : 'rgba(230,30,42,0.1)') : 'rgba(0,0,0,0.05)',
+                        color: isFocused ? (isBusiness ? 'rgb(245,158,11)' : 'rgb(230,30,42)') : 'rgba(0,0,0,0.2)'
+                      }}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300"
+                    >
                       <Mail size={16} />
-                    </div>
+                    </motion.div>
                     {isBusiness ? (
-                      <div className="w-8 h-8 rounded-lg bg-black/5 flex items-center justify-center text-brand-black/20">
+                      <motion.div 
+                        animate={{ 
+                          backgroundColor: isFocused ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.05)',
+                          color: isFocused ? 'rgb(245,158,11)' : 'rgba(0,0,0,0.2)'
+                        }}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300"
+                      >
                         <ShieldCheck size={16} />
-                      </div>
+                      </motion.div>
                     ) : (
-                      <div className="w-8 h-8 rounded-lg bg-black/5 flex items-center justify-center text-brand-black/20">
+                      <motion.div 
+                        animate={{ 
+                          backgroundColor: isFocused ? 'rgba(230,30,42,0.1)' : 'rgba(0,0,0,0.05)',
+                          color: isFocused ? 'rgb(230,30,42)' : 'rgba(0,0,0,0.2)'
+                        }}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300"
+                      >
                         <Phone size={16} />
-                      </div>
+                      </motion.div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <button 
+              <motion.button 
                 onClick={handleContinue}
-                className={`w-full h-16 ${isBusiness ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/20' : 'bg-brand-black hover:bg-brand-red shadow-black/20'} text-white rounded-2xl font-black uppercase tracking-widest text-[13px] shadow-lg transition-all duration-500 flex items-center justify-center gap-3 active:scale-[0.98]`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                disabled={isLoading}
+                className={`w-full h-16 ${isBusiness ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/30' : 'bg-brand-black hover:bg-brand-red shadow-black/20'} text-white rounded-2xl font-black uppercase tracking-widest text-[13px] shadow-xl transition-all duration-300 flex items-center justify-center gap-3 relative overflow-hidden`}
               >
-                Continue
-                <ArrowRight size={20} />
-              </button>
+                {/* Shine effect on button */}
+                <motion.div 
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: '200%' }}
+                  transition={{ duration: 1, ease: "easeInOut" }}
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
+                />
+                
+                {isLoading ? (
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                  />
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight size={20} />
+                  </>
+                )}
+              </motion.button>
 
-              <div className="relative py-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-black/5"></div>
+              {/* Trust Indicators */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="pt-6"
+              >
+                <div className="relative py-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-black/5"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-white px-4 text-[10px] font-black uppercase tracking-widest text-brand-black/30 flex items-center gap-2">
+                      <ShieldCheck size={14} className={isBusiness ? 'text-amber-500' : 'text-brand-red'} />
+                      {isBusiness ? 'Bank-Grade Security' : 'Secure & Encrypted'}
+                    </span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest text-brand-black/30">
-                  <span className="bg-white px-4">
-                    {isBusiness ? 'Trusted by 500+ Agencies' : 'Trusted by 1M+ Travellers'}
-                  </span>
+                
+                <div className="flex justify-center items-center gap-6 mt-4">
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-brand-black/40 uppercase tracking-widest">
+                    <CheckCircle2 size={12} className="text-green-500" />
+                    Verified Profiles
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-brand-black/40 uppercase tracking-widest">
+                    <CheckCircle2 size={12} className="text-green-500" />
+                    {isBusiness ? 'Priority Support' : 'Instant Booking'}
+                  </div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+
+            </motion.div>
           </div>
         </motion.div>
       </div>
@@ -253,7 +377,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                   {TABS.map((tab) => (
                     <button
                       key={tab.id}
-                      className={`relative h-full flex items-center gap-2.5 text-[13px] font-black tracking-tight uppercase transition-all duration-500 group ${activeTab === tab.id
+                      className={`relative h-full flex items-center gap-2.5 text-base font-black tracking-tight uppercase transition-all duration-500 group ${activeTab === tab.id
                           ? 'text-brand-red'
                           : 'text-brand-black/40 hover:text-brand-black'
                         }`}
@@ -285,10 +409,15 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
           {/* Right: Action buttons */}
           <div className="flex items-center justify-end gap-8">
-            <div className="flex items-center gap-2.5 text-[13px] font-black uppercase tracking-tight cursor-pointer text-brand-black/50 hover:text-brand-red transition-all duration-300 group">
-              <CreditCard size={18} className="group-hover:scale-110 transition-transform" />
-              <span>Bookings</span>
-            </div>
+            {user && (
+              <Link 
+                to="/my-bookings"
+                className="flex items-center gap-2.5 text-base font-black uppercase tracking-tight cursor-pointer text-brand-black/50 hover:text-brand-red transition-all duration-300 group"
+              >
+                <CheckCircle2 size={18} className="group-hover:scale-110 transition-transform" />
+                <span>Bookings</span>
+              </Link>
+            )}
 
             <div className="relative">
               {user ? (
@@ -297,8 +426,8 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                   className="flex items-center gap-3 pl-4 pr-1 py-1 rounded-full bg-brand-red/5 hover:bg-brand-red/10 border border-brand-red/10 transition-all duration-500 cursor-pointer shadow-sm group"
                 >
                   <div className="flex flex-col items-end mr-1">
-                    <span className="text-[12px] font-black text-brand-black leading-none mb-0.5">
-                      {user.name || (user.email ? user.email.split('@')[0] : user.mobile || 'Traveler')}
+                    <span className="text-[14px] font-black text-brand-black leading-none mb-0.5">
+                    {user.name || 'Traveler'}
                     </span>
                     <span className="text-[9px] font-bold text-brand-red uppercase tracking-widest leading-none">My Profile</span>
                   </div>
@@ -311,7 +440,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                   onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
                   className="flex items-center gap-3 pl-5 pr-1 py-1 rounded-full bg-brand-black text-white hover:bg-brand-red transition-all duration-500 cursor-pointer shadow-lg hover:shadow-brand-red/20 group"
                 >
-                  <span className="text-[12px] font-black uppercase tracking-widest">Account</span>
+                  <span className="text-[14px] font-black uppercase tracking-widest">Account</span>
                   <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
                     <UserCircle2 size={22} className="text-white" />
                   </div>

@@ -44,8 +44,7 @@ import OtpVerification from '../pages/OtpVerification';
 // User Dashboard
 import MyProfile from '../pages/MyProfile';
 import MyBookings from '../pages/MyBookings';
-import SavedTravellers from '../pages/SavedTravellers';
-import Wallet from '../pages/Wallet';
+import CoTravellers from '../pages/CoTravellers';
 import Notifications from '../pages/Notifications';
 import SupportTickets from '../pages/SupportTickets';
 import Settings from '../pages/Settings';
@@ -99,8 +98,7 @@ const AppRoutes = () => {
       <Route path="/my-bookings" element={<MyBookings />} />
       <Route path="/dashboard/profile" element={<MyProfile />} />
       <Route path="/dashboard/bookings" element={<MyBookings />} />
-      <Route path="/dashboard/saved-travellers" element={<SavedTravellers />} />
-      <Route path="/dashboard/wallet" element={<Wallet />} />
+      <Route path="/dashboard/co-travellers" element={<CoTravellers />} />
       <Route path="/dashboard/notifications" element={<Notifications />} />
       <Route path="/dashboard/support" element={<SupportTickets />} />
       <Route path="/dashboard/settings" element={<Settings />} />

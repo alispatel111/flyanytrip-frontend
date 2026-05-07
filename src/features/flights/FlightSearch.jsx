@@ -62,6 +62,10 @@ const FlightSearch = ({
   const [startDate, endDate] = dateRange;
 
   const containerRef = useRef(null);
+  const departureRef = useRef(null);
+  const returnRef = useRef(null);
+  const mainDepartureRef = useRef(null);
+  const mainRangeRef = useRef(null);
 
   const formatDateCompact = (date) => {
     if (!date) return '';
@@ -131,7 +135,11 @@ const FlightSearch = ({
           {/* FROM Box */}
           <div className="relative flex-1 min-w-[200px]">
             <div 
-              onClick={() => { setShowFromMenu(!showFromMenu); setShowToMenu(false); setShowTravelersMenu(false); }}
+              onClick={() => { 
+                setShowFromMenu(!showFromMenu); setShowToMenu(false); setShowTravelersMenu(false);
+                departureRef.current?.setOpen(false); returnRef.current?.setOpen(false);
+                mainDepartureRef.current?.setOpen(false); mainRangeRef.current?.setOpen(false);
+              }}
               className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
             >
               <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">FROM</div>
@@ -182,7 +190,11 @@ const FlightSearch = ({
           {/* TO Box */}
           <div className="relative flex-1 min-w-[200px]">
             <div 
-              onClick={() => { setShowToMenu(!showToMenu); setShowFromMenu(false); setShowTravelersMenu(false); }}
+              onClick={() => { 
+                setShowToMenu(!showToMenu); setShowFromMenu(false); setShowTravelersMenu(false);
+                departureRef.current?.setOpen(false); returnRef.current?.setOpen(false);
+                mainDepartureRef.current?.setOpen(false); mainRangeRef.current?.setOpen(false);
+              }}
               className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
             >
               <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">TO</div>
@@ -227,10 +239,20 @@ const FlightSearch = ({
 
           {/* DEPART Box */}
           <div className="relative min-w-[150px]">
-            <div className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all flex flex-col justify-center">
+            <div 
+              onClick={() => {
+                setShowFromMenu(false);
+                setShowToMenu(false);
+                setShowTravelersMenu(false);
+                departureRef.current?.setOpen(true);
+              }}
+              className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all flex flex-col justify-center"
+            >
               <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">DEPART</div>
               <div className="relative">
                 <DatePicker
+                  ref={departureRef}
+                  showPopperArrow={false}
                   selected={departureDate}
                   minDate={new Date()}
                   onChange={(date) => setDepartureDate(date)}
@@ -243,13 +265,28 @@ const FlightSearch = ({
 
           {/* RETURN Box */}
           <div className="relative min-w-[150px]">
-            <div className={`bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all flex flex-col justify-center ${tripType === 'one' ? 'opacity-50' : ''}`}>
+            <div 
+              onClick={() => {
+                setShowFromMenu(false);
+                setShowToMenu(false);
+                setShowTravelersMenu(false);
+                if (tripType === 'one') {
+                  setTripType('round');
+                  setTimeout(() => returnRef.current?.setOpen(true), 10);
+                } else {
+                  returnRef.current?.setOpen(true);
+                }
+              }}
+              className={`bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all flex flex-col justify-center ${tripType === 'one' ? 'opacity-50' : ''}`}
+            >
               <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">RETURN</div>
               <div className="relative">
                 {tripType === 'one' ? (
-                  <div onClick={() => setTripType('round')} className="text-sm font-bold text-brand-black/30">Select Return</div>
+                  <div className="text-sm font-bold text-brand-black/30">Select Return</div>
                 ) : (
                   <DatePicker
+                    ref={returnRef}
+                    showPopperArrow={false}
                     selected={endDate}
                     startDate={startDate}
                     endDate={endDate}
@@ -267,7 +304,11 @@ const FlightSearch = ({
           {/* PASSENGER Box */}
           <div className="relative min-w-[200px]">
             <div 
-              onClick={() => { setShowTravelersMenu(!showTravelersMenu); setShowFromMenu(false); setShowToMenu(false); }}
+              onClick={() => { 
+                setShowTravelersMenu(!showTravelersMenu); setShowFromMenu(false); setShowToMenu(false);
+                departureRef.current?.setOpen(false); returnRef.current?.setOpen(false);
+                mainDepartureRef.current?.setOpen(false); mainRangeRef.current?.setOpen(false);
+              }}
               className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
             >
               <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">PASSENGER & CLASS</div>
@@ -412,6 +453,10 @@ const FlightSearch = ({
               setShowFromMenu(!showFromMenu);
               setShowToMenu(false);
               setShowTravelersMenu(false);
+              departureRef.current?.setOpen(false);
+              returnRef.current?.setOpen(false);
+              mainDepartureRef.current?.setOpen(false);
+              mainRangeRef.current?.setOpen(false);
             }}
           >
             <div className="flex items-center gap-1.5 mb-1">
@@ -491,6 +536,10 @@ const FlightSearch = ({
               setShowToMenu(!showToMenu);
               setShowFromMenu(false);
               setShowTravelersMenu(false);
+              departureRef.current?.setOpen(false);
+              returnRef.current?.setOpen(false);
+              mainDepartureRef.current?.setOpen(false);
+              mainRangeRef.current?.setOpen(false);
             }}
           >
             <div className="flex items-center gap-1.5 mb-1">
@@ -554,10 +603,21 @@ const FlightSearch = ({
 
         <div>
           <label className="block text-[10px] font-extrabold uppercase tracking-widest text-brand-black/40 mb-2 ml-1">{tripType === 'round' ? 'Departure - Return' : 'Departure'}</label>
-          <div className="bg-white border border-black/10 p-3 rounded-xl font-bold text-brand-black flex items-center gap-3 transition-all hover:border-brand-red hover:shadow-md h-[]">
+          <div 
+            onClick={() => {
+              setShowFromMenu(false);
+              setShowToMenu(false);
+              setShowTravelersMenu(false);
+              if (tripType === 'round') mainRangeRef.current?.setOpen(true);
+              else mainDepartureRef.current?.setOpen(true);
+            }}
+            className="bg-white border border-black/10 p-3 rounded-xl font-bold text-brand-black flex items-center gap-3 transition-all hover:border-brand-red hover:shadow-md h-[] cursor-pointer"
+          >
             {tripType === 'round' ? (
               <div className="relative w-full">
                 <DatePicker
+                  ref={mainRangeRef}
+                  showPopperArrow={false}
                   selectsRange={true}
                   startDate={startDate}
                   endDate={endDate}
@@ -575,6 +635,8 @@ const FlightSearch = ({
             ) : (
               <div className="relative w-full">
                 <DatePicker
+                  ref={mainDepartureRef}
+                  showPopperArrow={false}
                   selected={departureDate}
                   minDate={new Date()}
                   onChange={(date) => setDepartureDate(date)}
@@ -598,6 +660,10 @@ const FlightSearch = ({
               setShowTravelersMenu(!showTravelersMenu);
               setShowFromMenu(false);
               setShowToMenu(false);
+              departureRef.current?.setOpen(false);
+              returnRef.current?.setOpen(false);
+              mainDepartureRef.current?.setOpen(false);
+              mainRangeRef.current?.setOpen(false);
             }}
           >
             <span className="truncate text-sm">
