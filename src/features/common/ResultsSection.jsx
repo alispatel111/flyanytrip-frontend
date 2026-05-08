@@ -151,7 +151,7 @@ const ResultCard = ({ r, navigate }) => (
             <div className="text-[10px] font-bold text-brand-black/40 uppercase tracking-wider mb-1">Ticket Price</div>
             <div className="text-[26px] font-black text-brand-black mb-4 leading-none">₹{r.price}</div>
             <button 
-              onClick={() => navigate('/booking-review')}
+              onClick={() => navigate('/booking-review', { state: { flight: r } })}
               className="w-full bg-brand-black text-white h-11 rounded-xl text-sm font-bold shadow-md hover:bg-brand-red hover:shadow-lg transition-all active:scale-95 whitespace-nowrap"
             >
               Select Flight
