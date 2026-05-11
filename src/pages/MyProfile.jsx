@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Mail, Phone, Calendar, MapPin, 
-  CheckCircle2, Shield, UserCircle2, Check, ArrowRight, Activity, Plane, FileText, Utensils, Train, Globe, Briefcase
+  CheckCircle2, Shield, UserCircle2, Check, ArrowRight, Activity, Plane, FileText, Utensils, Train, Globe, Briefcase,
+  Map, Navigation, PlaneTakeoff, Star
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import DashboardLayout from '../layouts/DashboardLayout';
@@ -25,34 +26,47 @@ const InputField = ({ icon: Icon, label, value, onChange, type = "text", placeho
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <div className="relative group">
-      <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block transition-colors duration-300 ${isFocused ? 'text-brand-red' : 'text-brand-black/40'}`}>
-        {label}
-      </label>
-      <div className="relative">
-        <input 
-          type={type}
-          value={value}
-          onChange={onChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder={placeholder}
-          className={`w-full h-14 bg-black/[0.02] focus:bg-white border-2 rounded-2xl pl-14 pr-6 outline-none transition-all duration-300 font-bold text-brand-black placeholder:text-brand-black/20 ${
-            isFocused 
-              ? 'border-brand-red shadow-[0_0_0_4px_rgba(230,30,42,0.1)]' 
-              : 'border-transparent hover:border-black/5'
-          }`}
-        />
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex gap-2">
-          <motion.div 
-            animate={{ 
-              backgroundColor: isFocused ? 'rgba(230,30,42,0.1)' : 'transparent',
-              color: isFocused ? 'rgb(230,30,42)' : 'rgba(0,0,0,0.2)'
-            }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300"
+    <div className="relative group z-10">
+      <div className="flex justify-between items-end mb-2">
+        <label className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${isFocused ? 'text-brand-red' : 'text-brand-black/50'}`}>
+          {label}
+        </label>
+        {isFocused && (
+          <motion.span 
+            initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} 
+            className="text-[8px] font-bold uppercase tracking-wider text-brand-red bg-brand-red/10 px-2 py-0.5 rounded-full"
           >
-            <Icon size={18} />
-          </motion.div>
+            Editing
+          </motion.span>
+        )}
+      </div>
+      <div className="relative">
+        <div className={`absolute inset-0 bg-gradient-to-r from-brand-red to-purple-500 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${isFocused ? '!opacity-30' : ''}`} />
+        <div className={`relative bg-white/80 backdrop-blur-xl border-2 rounded-2xl flex items-center transition-all duration-300 ${
+            isFocused 
+              ? 'border-brand-red shadow-[0_8px_30px_rgba(230,30,42,0.15)] scale-[1.02] z-20' 
+              : 'border-white hover:border-brand-red/30 hover:bg-white'
+          }`}>
+          <div className="pl-5 pr-3 text-brand-black/40">
+            <motion.div 
+              animate={{ 
+                color: isFocused ? 'rgb(230,30,42)' : 'rgba(0,0,0,0.3)',
+                scale: isFocused ? 1.1 : 1
+              }}
+              className="transition-colors duration-300"
+            >
+              <Icon size={20} strokeWidth={isFocused ? 2.5 : 2} />
+            </motion.div>
+          </div>
+          <input 
+            type={type}
+            value={value}
+            onChange={onChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            placeholder={placeholder}
+            className="w-full h-14 bg-transparent outline-none font-bold text-brand-black placeholder:text-brand-black/20 text-[15px] pr-5"
+          />
         </div>
       </div>
     </div>
@@ -63,42 +77,58 @@ const SelectField = ({ icon: Icon, label, value, onChange, options, placeholder 
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <div className="relative group">
-      <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block transition-colors duration-300 ${isFocused ? 'text-brand-red' : 'text-brand-black/40'}`}>
-        {label}
-      </label>
-      <div className="relative">
-        <select 
-          value={value}
-          onChange={onChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className={`w-full h-14 bg-black/[0.02] focus:bg-white border-2 rounded-2xl pl-14 pr-6 outline-none transition-all duration-300 font-bold text-brand-black appearance-none ${
-            isFocused 
-              ? 'border-brand-red shadow-[0_0_0_4px_rgba(230,30,42,0.1)]' 
-              : 'border-transparent hover:border-black/5'
-          }`}
-        >
-          {placeholder && <option value="" disabled className="text-brand-black/40">{placeholder}</option>}
-          {options.map((opt, i) => (
-            <option key={i} value={typeof opt === 'object' ? opt.value : opt}>{typeof opt === 'object' ? opt.label : opt}</option>
-          ))}
-        </select>
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex gap-2 pointer-events-none">
-          <motion.div 
-            animate={{ 
-              backgroundColor: isFocused ? 'rgba(230,30,42,0.1)' : 'transparent',
-              color: isFocused ? 'rgb(230,30,42)' : 'rgba(0,0,0,0.2)'
-            }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300"
+    <div className="relative group z-10">
+      <div className="flex justify-between items-end mb-2">
+        <label className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${isFocused ? 'text-brand-red' : 'text-brand-black/50'}`}>
+          {label}
+        </label>
+        {isFocused && (
+          <motion.span 
+            initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} 
+            className="text-[8px] font-bold uppercase tracking-wider text-brand-red bg-brand-red/10 px-2 py-0.5 rounded-full"
           >
-            <Icon size={18} />
-          </motion.div>
-        </div>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-brand-black/40">
-          <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+            Selecting
+          </motion.span>
+        )}
+      </div>
+      <div className="relative">
+        <div className={`absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${isFocused ? '!opacity-30' : ''}`} />
+        <div className={`relative bg-white/80 backdrop-blur-xl border-2 rounded-2xl flex items-center transition-all duration-300 ${
+            isFocused 
+              ? 'border-blue-500 shadow-[0_8px_30px_rgba(59,130,246,0.15)] scale-[1.02] z-20' 
+              : 'border-white hover:border-blue-500/30 hover:bg-white'
+          }`}>
+          <div className="pl-5 pr-3 text-brand-black/40">
+            <motion.div 
+              animate={{ 
+                color: isFocused ? 'rgb(59,130,246)' : 'rgba(0,0,0,0.3)',
+                scale: isFocused ? 1.1 : 1
+              }}
+              className="transition-colors duration-300"
+            >
+              <Icon size={20} strokeWidth={isFocused ? 2.5 : 2} />
+            </motion.div>
+          </div>
+          <select 
+            value={value}
+            onChange={onChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className="w-full h-14 bg-transparent outline-none font-bold text-brand-black appearance-none text-[15px] pr-10 cursor-pointer"
+          >
+            {placeholder && <option value="" disabled className="text-brand-black/40">{placeholder}</option>}
+            {options.map((opt, i) => (
+              <option key={i} value={typeof opt === 'object' ? opt.value : opt} className="font-medium">{typeof opt === 'object' ? opt.label : opt}</option>
+            ))}
+          </select>
+          <div className="absolute right-5 pointer-events-none text-brand-black/40">
+            <motion.svg 
+              animate={{ rotate: isFocused ? 180 : 0, color: isFocused ? 'rgb(59,130,246)' : 'rgba(0,0,0,0.4)' }}
+              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </motion.svg>
+          </div>
         </div>
       </div>
     </div>
@@ -110,6 +140,7 @@ const MyProfile = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [formError, setFormError] = useState('');
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -142,6 +173,25 @@ const MyProfile = () => {
   }, [formData]);
 
   const handleSave = async () => {
+    setFormError('');
+    
+    if (formData.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setFormError('Please enter a valid email address');
+        return;
+      }
+    }
+    
+    if (formData.mobile) {
+      const mobileRegex = /^[0-9]{10}$/;
+      const cleanMobile = formData.mobile.replace(/\D/g, '');
+      if (!mobileRegex.test(cleanMobile)) {
+        setFormError('Please enter a valid 10-digit mobile number');
+        return;
+      }
+    }
+
     setIsSaving(true);
     // Simulate network request for premium feel
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -198,52 +248,86 @@ const MyProfile = () => {
         className="max-w-4xl"
       >
         {/* Profile Completion Banner */}
-        <motion.div variants={itemVariants} className="mb-10 relative overflow-hidden rounded-[32px] bg-gradient-to-r from-brand-black to-gray-800 text-white p-8 md:p-10 shadow-2xl shadow-brand-black/20">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-red/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+        <motion.div variants={itemVariants} className="mb-12 relative overflow-hidden rounded-[40px] bg-brand-black p-10 md:p-12 shadow-2xl shadow-brand-black/20 border border-white/10 group">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-brand-red/30 to-purple-600/30 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 group-hover:scale-110 transition-transform duration-1000" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-blue-600/20 to-transparent rounded-full blur-[60px] translate-y-1/2 -translate-x-1/3" />
           
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-10">
             <div>
-              <h3 className="text-2xl font-black tracking-tight mb-2">Profile Status</h3>
-              <p className="text-white/60 font-bold uppercase text-[11px] tracking-widest">
-                Complete your profile to unlock faster bookings
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/10 mb-4"
+              >
+                <div className="w-2 h-2 rounded-full bg-brand-red animate-pulse" />
+                <span className="text-white text-[10px] font-bold uppercase tracking-widest">Profile Analytics</span>
+              </motion.div>
+              <h3 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-2">Profile Status</h3>
+              <p className="text-white/60 font-bold uppercase text-[12px] tracking-widest max-w-sm leading-relaxed">
+                Complete your profile to unlock faster bookings and personalized offers
               </p>
             </div>
             
-            <div className="flex items-center gap-6 bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10">
-              <div className="relative w-16 h-16 flex items-center justify-center">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-white/10" />
+            <div className="flex items-center gap-8 bg-white/5 p-6 rounded-[32px] backdrop-blur-xl border border-white/10 shadow-2xl">
+              <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
+                <svg className="w-full h-full transform -rotate-90 overflow-visible">
+                  <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/5" />
                   <motion.circle 
-                    cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" 
-                    className="text-brand-red drop-shadow-[0_0_8px_rgba(230,30,42,0.5)]"
-                    strokeDasharray={2 * Math.PI * 28}
-                    initial={{ strokeDashoffset: 2 * Math.PI * 28 }}
-                    animate={{ strokeDashoffset: 2 * Math.PI * 28 * (1 - completionPercentage / 100) }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
+                    cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" 
+                    className="text-brand-red drop-shadow-[0_0_12px_rgba(230,30,42,0.6)]"
+                    strokeDasharray={2 * Math.PI * 40}
+                    initial={{ strokeDashoffset: 2 * Math.PI * 40 }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 40 * (1 - completionPercentage / 100) }}
+                    transition={{ duration: 2, ease: "easeOut", type: "spring", bounce: 0.4 }}
+                    strokeLinecap="round"
                   />
                 </svg>
-                <span className="absolute text-sm font-black">{completionPercentage}%</span>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-black text-white">{completionPercentage}%</span>
+                </div>
               </div>
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-1">Completion</div>
-                <div className="text-lg font-bold">{completionPercentage === 100 ? 'All Set!' : 'Keep Going'}</div>
+              <div className="pr-4 whitespace-nowrap">
+                <div className="text-[11px] font-black uppercase tracking-widest text-brand-red mb-1">Completion Level</div>
+                <div className="text-2xl font-bold text-white tracking-tight leading-none">{completionPercentage === 100 ? 'All Set!' : 'Keep Going'}</div>
               </div>
             </div>
           </div>
         </motion.div>
 
+        {/* Travel Statistics - NEW */}
+        <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+          {[
+            { label: "Flights Taken", value: "12", icon: PlaneTakeoff, color: "text-blue-500", bg: "bg-blue-500/10" },
+            { label: "Countries Visited", value: "5", icon: Map, color: "text-green-500", bg: "bg-green-500/10" },
+            { label: "Miles Flown", value: "24.5k", icon: Navigation, color: "text-purple-500", bg: "bg-purple-500/10" },
+            { label: "Reward Points", value: "8,450", icon: Star, color: "text-amber-500", bg: "bg-amber-500/10" }
+          ].map((stat, i) => (
+            <div key={i} className="bg-white/60 backdrop-blur-xl rounded-[24px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 flex flex-col items-center justify-center text-center">
+              <div className={`w-12 h-12 rounded-full ${stat.bg} ${stat.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
+                <stat.icon size={20} strokeWidth={2.5} />
+              </div>
+              <h5 className="text-2xl font-black text-brand-black mb-1">{stat.value}</h5>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-brand-black/40">{stat.label}</p>
+            </div>
+          ))}
+        </motion.div>
+
         {/* Form Sections */}
-        <div className="space-y-8">
+        <div className="space-y-10">
           
           {/* Basic Info Card */}
-          <motion.div variants={itemVariants} className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-            <h4 className="text-sm font-black uppercase tracking-widest text-brand-black mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-xl bg-brand-red/10 text-brand-red flex items-center justify-center"><User size={16} /></span>
-              Basic Information
-            </h4>
+          <motion.div variants={itemVariants} className="bg-white/60 backdrop-blur-3xl rounded-[40px] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-brand-red/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-brand-red/10 transition-colors duration-1000" />
+            <div className="flex items-center gap-4 mb-10">
+              <div className="w-14 h-14 rounded-2xl bg-brand-red text-white flex items-center justify-center shadow-[0_8px_20px_rgba(230,30,42,0.3)]">
+                <User size={24} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h4 className="text-xl font-black text-brand-black tracking-tight">Basic Information</h4>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-brand-black/40">Core identity details</p>
+              </div>
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10 relative z-10">
               <InputField icon={User} label="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Enter your legal name" />
               <InputField icon={Calendar} label="Date of Birth" value={formData.dob} onChange={e => setFormData({...formData, dob: e.target.value})} type="date" />
               <SelectField 
@@ -267,13 +351,19 @@ const MyProfile = () => {
 
           {/* Business Details Card (Only for Business Accounts) */}
           {user?.type === 'business' && (
-            <motion.div variants={itemVariants} className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 relative overflow-hidden">
-              <h4 className="text-sm font-black uppercase tracking-widest text-brand-black mb-8 flex items-center gap-3">
-                <span className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center"><Briefcase size={16} /></span>
-                Business Details
-              </h4>
+            <motion.div variants={itemVariants} className="bg-white/60 backdrop-blur-3xl rounded-[40px] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-amber-500/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-amber-500/10 transition-colors duration-1000" />
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(245,158,11,0.3)]">
+                  <Briefcase size={24} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black text-brand-black tracking-tight">Business Details</h4>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-brand-black/40">Corporate information</p>
+                </div>
+              </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10 relative z-10">
                 <InputField icon={Briefcase} label="GSTIN Number" value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value})} placeholder="Enter your 15-digit GSTIN" />
               </div>
             </motion.div>
@@ -281,54 +371,72 @@ const MyProfile = () => {
 
           {/* Preferences Card (Hidden for Business Accounts) */}
           {user?.type !== 'business' && (
-            <motion.div variants={itemVariants} className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 relative overflow-hidden">
-            <h4 className="text-sm font-black uppercase tracking-widest text-brand-black mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center"><Utensils size={16} /></span>
-              Travel Preferences
-            </h4>
+            <motion.div variants={itemVariants} className="bg-white/60 backdrop-blur-3xl rounded-[40px] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-orange-500/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-orange-500/10 transition-colors duration-1000" />
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(249,115,22,0.3)]">
+                  <Utensils size={24} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black text-brand-black tracking-tight">Travel Preferences</h4>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-brand-black/40">Customized experiences</p>
+                </div>
+              </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <SelectField 
-                icon={Utensils} 
-                label="Meal Preference" 
-                value={formData.mealPreference} 
-                onChange={e => setFormData({...formData, mealPreference: e.target.value})} 
-                options={['Any', 'Vegetarian', 'Non-Vegetarian', 'Vegan', 'Halal', 'Kosher']}
-                placeholder="Select Meal Preference"
-              />
-              <SelectField 
-                icon={Train} 
-                label="Train Berth Preference" 
-                value={formData.trainBerthPreference} 
-                onChange={e => setFormData({...formData, trainBerthPreference: e.target.value})} 
-                options={['Any', 'Lower', 'Middle', 'Upper', 'Side Lower', 'Side Upper']}
-                placeholder="Select Berth Preference"
-              />
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10 relative z-10">
+                <SelectField 
+                  icon={Utensils} 
+                  label="Meal Preference" 
+                  value={formData.mealPreference} 
+                  onChange={e => setFormData({...formData, mealPreference: e.target.value})} 
+                  options={['Any', 'Vegetarian', 'Non-Vegetarian', 'Vegan', 'Halal', 'Kosher']}
+                  placeholder="Select Meal Preference"
+                />
+                <SelectField 
+                  icon={Train} 
+                  label="Train Berth Preference" 
+                  value={formData.trainBerthPreference} 
+                  onChange={e => setFormData({...formData, trainBerthPreference: e.target.value})} 
+                  options={['Any', 'Lower', 'Middle', 'Upper', 'Side Lower', 'Side Upper']}
+                  placeholder="Select Berth Preference"
+                />
+              </div>
             </motion.div>
           )}
 
           {/* Contact Info Card */}
-          <motion.div variants={itemVariants} className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 relative overflow-hidden">
-            <h4 className="text-sm font-black uppercase tracking-widest text-brand-black mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center"><Phone size={16} /></span>
-              Contact Details
-            </h4>
+          <motion.div variants={itemVariants} className="bg-white/60 backdrop-blur-3xl rounded-[40px] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-500/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-blue-500/10 transition-colors duration-1000" />
+            <div className="flex items-center gap-4 mb-10">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(59,130,246,0.3)]">
+                <Phone size={24} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h4 className="text-xl font-black text-brand-black tracking-tight">Contact Details</h4>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-brand-black/40">Reachability</p>
+              </div>
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10 relative z-10">
               <InputField icon={Mail} label="Email Address" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} type="email" placeholder="name@example.com" />
               <InputField icon={Phone} label="Mobile Number" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} type="tel" placeholder="+1 (555) 000-0000" />
             </div>
           </motion.div>
 
           {/* Address Card */}
-          <motion.div variants={itemVariants} className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 relative overflow-hidden">
-            <h4 className="text-sm font-black uppercase tracking-widest text-brand-black mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-xl bg-green-500/10 text-green-500 flex items-center justify-center"><MapPin size={16} /></span>
-              Location Information
-            </h4>
+          <motion.div variants={itemVariants} className="bg-white/60 backdrop-blur-3xl rounded-[40px] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-green-500/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-green-500/10 transition-colors duration-1000" />
+            <div className="flex items-center gap-4 mb-10">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(16,185,129,0.3)]">
+                <MapPin size={24} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h4 className="text-xl font-black text-brand-black tracking-tight">Location Information</h4>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-brand-black/40">Residential details</p>
+              </div>
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10 relative z-10">
               <div className="md:col-span-2">
                 <InputField icon={MapPin} label="Full Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Street address, apartment, suite" />
               </div>
@@ -339,47 +447,59 @@ const MyProfile = () => {
 
           {/* Passport Details Card (Hidden for Business Accounts) */}
           {user?.type !== 'business' && (
-            <motion.div variants={itemVariants} className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 relative overflow-hidden">
-            <h4 className="text-sm font-black uppercase tracking-widest text-brand-black mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center"><FileText size={16} /></span>
-              Passport Details
-            </h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <InputField icon={FileText} label="Passport No." value={formData.passportNo} onChange={e => setFormData({...formData, passportNo: e.target.value})} placeholder="Enter passport number" />
-              <InputField icon={Calendar} label="Expiry Date" value={formData.passportExpiry} onChange={e => setFormData({...formData, passportExpiry: e.target.value})} type="date" />
-              <div className="md:col-span-2">
-                <SelectField 
-                  icon={Globe} 
-                  label="Issuing Country" 
-                  value={formData.issuingCountry} 
-                  onChange={e => setFormData({...formData, issuingCountry: e.target.value})} 
-                  options={['India', 'USA', 'UK', 'Canada', 'Australia', 'Other']}
-                  placeholder="Select Issuing Country"
-                />
+            <motion.div variants={itemVariants} className="bg-white/60 backdrop-blur-3xl rounded-[40px] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-purple-500/10 transition-colors duration-1000" />
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(168,85,247,0.3)]">
+                  <FileText size={24} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black text-brand-black tracking-tight">Passport Details</h4>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-brand-black/40">International travel</p>
+                </div>
               </div>
+            
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10 relative z-10">
+                <InputField icon={FileText} label="Passport No." value={formData.passportNo} onChange={e => setFormData({...formData, passportNo: e.target.value})} placeholder="Enter passport number" />
+                <InputField icon={Calendar} label="Expiry Date" value={formData.passportExpiry} onChange={e => setFormData({...formData, passportExpiry: e.target.value})} type="date" />
+                <div className="md:col-span-2">
+                  <SelectField 
+                    icon={Globe} 
+                    label="Issuing Country" 
+                    value={formData.issuingCountry} 
+                    onChange={e => setFormData({...formData, issuingCountry: e.target.value})} 
+                    options={['India', 'USA', 'UK', 'Canada', 'Australia', 'Other']}
+                    placeholder="Select Issuing Country"
+                  />
+                </div>
               </div>
             </motion.div>
           )}
 
           {/* Frequent Flyer Card (Hidden for Business Accounts) */}
           {user?.type !== 'business' && (
-            <motion.div variants={itemVariants} className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 relative overflow-hidden">
-            <h4 className="text-sm font-black uppercase tracking-widest text-brand-black mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center"><Plane size={16} /></span>
-              Frequent Flyer Details
-            </h4>
+            <motion.div variants={itemVariants} className="bg-white/60 backdrop-blur-3xl rounded-[40px] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-indigo-500/10 transition-colors duration-1000" />
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(99,102,241,0.3)]">
+                  <Plane size={24} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black text-brand-black tracking-tight">Frequent Flyer Details</h4>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-brand-black/40">Loyalty programs</p>
+                </div>
+              </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <SelectField 
-                icon={Plane} 
-                label="Airline" 
-                value={formData.airline} 
-                onChange={e => setFormData({...formData, airline: e.target.value})} 
-                options={['Air India', 'IndiGo', 'Vistara', 'Emirates', 'Qatar Airways', 'Other']}
-                placeholder="Select Airline"
-              />
-              <InputField icon={Activity} label="Frequent Flyer Number" value={formData.frequentFlyerNo} onChange={e => setFormData({...formData, frequentFlyerNo: e.target.value})} placeholder="Enter membership number" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10 relative z-10">
+                <SelectField 
+                  icon={Plane} 
+                  label="Airline" 
+                  value={formData.airline} 
+                  onChange={e => setFormData({...formData, airline: e.target.value})} 
+                  options={['Air India', 'IndiGo', 'Vistara', 'Emirates', 'Qatar Airways', 'Other']}
+                  placeholder="Select Airline"
+                />
+                <InputField icon={Activity} label="Frequent Flyer Number" value={formData.frequentFlyerNo} onChange={e => setFormData({...formData, frequentFlyerNo: e.target.value})} placeholder="Enter membership number" />
               </div>
             </motion.div>
           )}
@@ -387,7 +507,15 @@ const MyProfile = () => {
         </div>
 
         {/* Action Button */}
-        <motion.div variants={itemVariants} className="mt-10 flex justify-end">
+        <motion.div variants={itemVariants} className="mt-10 flex flex-col items-end">
+          {formError && (
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              className="text-brand-red text-[13px] font-bold mb-4 bg-brand-red/10 px-4 py-2 rounded-xl"
+            >
+              {formError}
+            </motion.p>
+          )}
           <motion.button 
             onClick={handleSave}
             disabled={isSaving}

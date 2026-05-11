@@ -9,7 +9,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreditCard, UserCircle2, Plane, Building2, Compass, FileText, Mail, Phone, ArrowRight, X, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { CreditCard, UserCircle2, Plane, Building2, Compass, FileText, Mail, Phone, ArrowRight, X, ShieldCheck, CheckCircle2, Bell } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -29,31 +29,61 @@ const AuthModal = ({ isOpen, onClose, type = 'personal' }) => {
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [password, setPassword] = useState('');
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [authMode, setAuthMode] = useState('signup'); // 'login' or 'signup'
   
   if (!isOpen) return null;
   const isBusiness = type === 'business';
 
   const handleContinue = async () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim()) {
+      setError('Please enter your details');
+      return;
+    }
+    if (authMode === 'login' && !password.trim()) {
+      setError('Please enter your password');
+      return;
+    }
+    setError('');
+    
+    const isEmail = inputValue.includes('@');
+    
+    if (isEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(inputValue)) {
+        setError('Please enter a valid email address');
+        return;
+      }
+    } else {
+      const mobileRegex = /^[0-9]{10}$/;
+      const cleanInput = inputValue.replace(/\D/g, '');
+      if (!mobileRegex.test(cleanInput)) {
+        setError('Please enter a valid 10-digit mobile number');
+        return;
+      }
+    }
+
     setIsLoading(true);
     
     // Simulate a brief loading animation for better UX/trust building
     await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const isEmail = inputValue.includes('@');
     
     // Categorize input based on whether it looks like an email
     const loginData = isBusiness 
       ? { 
           email: isEmail ? inputValue : '', 
           agentId: !isEmail ? inputValue : '', 
-          type: 'business' 
+          type: 'business',
+          name: isEmail ? inputValue.split('@')[0] : 'Agent User'
         }
       : { 
           email: isEmail ? inputValue : '', 
           mobile: !isEmail ? inputValue : '', 
-          type: 'personal' 
+          type: 'personal',
+          name: isEmail ? inputValue.split('@')[0] : 'Guest User'
         };
       
     login(loginData);
@@ -130,21 +160,28 @@ const AuthModal = ({ isOpen, onClose, type = 'personal' }) => {
                 {isBusiness ? <ShieldCheck size={48} strokeWidth={1.5} /> : <UserCircle2 size={48} strokeWidth={1.5} />}
               </motion.div>
 
-              <motion.h2 
+              <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-3xl font-black text-brand-black mb-2 tracking-tight"
+                className="mb-6"
               >
-                {isBusiness ? 'Agent Portal' : 'Welcome Back'}
-              </motion.h2>
+                {isBusiness ? (
+                  <h2 className="text-3xl font-black text-brand-black mb-2 tracking-tight">Agent Portal</h2>
+                ) : (
+                  <div className="flex bg-black/5 p-1 rounded-2xl w-full max-w-[240px] mx-auto mt-2">
+                    <button onClick={() => { setAuthMode('login'); setError(''); }} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${authMode === 'login' ? 'bg-white shadow-md text-brand-red' : 'text-brand-black/40 hover:text-brand-black'}`}>Login</button>
+                    <button onClick={() => { setAuthMode('signup'); setError(''); }} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${authMode === 'signup' ? 'bg-white shadow-md text-brand-red' : 'text-brand-black/40 hover:text-brand-black'}`}>Sign Up</button>
+                  </div>
+                )}
+              </motion.div>
               <motion.p 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
                 className="text-brand-black/50 font-bold uppercase text-[11px] tracking-widest"
               >
-                {isBusiness ? 'Exclusive B2B Access' : 'Sign in to continue'}
+                {isBusiness ? 'Exclusive B2B Access' : (authMode === 'login' ? 'Sign in to continue' : 'Create a new account')}
               </motion.p>
             </div>
 
@@ -163,7 +200,7 @@ const AuthModal = ({ isOpen, onClose, type = 'personal' }) => {
                   <input
                     type="text"
                     value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
+                    onChange={(e) => { setInputValue(e.target.value); setError(''); }}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
                     placeholder="Enter your details"
@@ -207,6 +244,38 @@ const AuthModal = ({ isOpen, onClose, type = 'personal' }) => {
                   </div>
                 </div>
               </div>
+
+              {authMode === 'login' && (
+                <div className="relative group">
+                  <label className={`text-[11px] font-black uppercase tracking-widest mb-2 block ml-1 transition-colors duration-300 ${isPasswordFocused ? (isBusiness ? 'text-amber-600' : 'text-brand-red') : 'text-brand-black/40'}`}>
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                      onFocus={() => setIsPasswordFocused(true)}
+                      onBlur={() => setIsPasswordFocused(false)}
+                      placeholder="Enter your password"
+                      className={`w-full h-16 bg-black/[0.03] border-2 focus:bg-white rounded-2xl px-6 outline-none transition-all duration-300 font-bold text-brand-black placeholder:text-brand-black/20 ${
+                        isPasswordFocused 
+                          ? (isBusiness ? 'border-amber-500 shadow-[0_0_0_4px_rgba(245,158,11,0.1)]' : 'border-brand-red shadow-[0_0_0_4px_rgba(230,30,42,0.1)]') 
+                          : 'border-transparent hover:border-black/10'
+                      }`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <motion.p 
+                  initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                  className="text-brand-red text-[11px] font-bold ml-1"
+                >
+                  {error}
+                </motion.p>
+              )}
 
               <motion.button 
                 onClick={handleContinue}
@@ -294,6 +363,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isB2CModalOpen, setIsB2CModalOpen] = useState(false);
   const [isB2BModalOpen, setIsB2BModalOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === '/';
 
@@ -417,6 +487,53 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                 <CheckCircle2 size={18} className="group-hover:scale-110 transition-transform" />
                 <span>Bookings</span>
               </Link>
+            )}
+
+            {/* Notification Bell */}
+            {user && (
+              <div className="relative">
+                <button 
+                  onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                  className="w-10 h-10 rounded-full bg-black/5 hover:bg-brand-red/10 flex items-center justify-center text-brand-black/60 hover:text-brand-red transition-all relative group"
+                >
+                  <Bell size={20} className="group-hover:scale-110 transition-transform" />
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-brand-red rounded-full border border-white" />
+                </button>
+
+                <AnimatePresence>
+                  {isNotificationOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsNotificationOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute top-full right-0 mt-4 w-80 bg-white rounded-3xl shadow-2xl border border-black/5 overflow-hidden z-50 p-4"
+                      >
+                        <div className="flex items-center justify-between mb-4 px-2">
+                          <h3 className="text-[14px] font-black uppercase tracking-widest text-brand-black">Notifications</h3>
+                          <span className="text-[10px] font-bold text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-1 rounded-full">2 New</span>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="p-3 rounded-2xl bg-brand-red/5 hover:bg-brand-red/10 transition-colors cursor-pointer border border-brand-red/10">
+                            <h4 className="text-[12px] font-black text-brand-black mb-1">Flight Price Alert</h4>
+                            <p className="text-[11px] text-brand-black/60 leading-tight">Prices for Mumbai to Dubai have dropped by 15%.</p>
+                            <span className="text-[9px] font-bold text-brand-red uppercase tracking-widest mt-2 block">Just now</span>
+                          </div>
+                          <div className="p-3 rounded-2xl hover:bg-black/5 transition-colors cursor-pointer">
+                            <h4 className="text-[12px] font-black text-brand-black mb-1">Complete your profile</h4>
+                            <p className="text-[11px] text-brand-black/60 leading-tight">Add your passport details for faster international bookings.</p>
+                            <span className="text-[9px] font-bold text-brand-black/40 uppercase tracking-widest mt-2 block">2 hours ago</span>
+                          </div>
+                        </div>
+                        <Link to="/dashboard/notifications" onClick={() => setIsNotificationOpen(false)} className="block mt-4 text-center text-[11px] font-black text-brand-red uppercase tracking-widest hover:underline">
+                          View All
+                        </Link>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
 
             <div className="relative">

@@ -1,8 +1,11 @@
-import React from 'react';
-import { Bell, Info, Tag, AlertCircle, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Bell, Info, Tag, AlertCircle, Calendar, X } from 'lucide-react';
 import DashboardLayout from '../layouts/DashboardLayout';
 
 const Notifications = () => {
+  const [selectedNotif, setSelectedNotif] = useState(null);
+
   const notifications = [
     {
       id: 1,
@@ -44,7 +47,7 @@ const Notifications = () => {
     >
       <div className="space-y-4">
         {notifications.map((notif) => (
-          <div key={notif.id} className="p-6 bg-black/[0.02] border border-black/5 rounded-[32px] hover:bg-white hover:shadow-xl hover:shadow-black/5 transition-all duration-500 group">
+          <div key={notif.id} onClick={() => setSelectedNotif(notif)} className="cursor-pointer p-6 bg-black/[0.02] border border-black/5 rounded-[32px] hover:bg-white hover:shadow-xl hover:shadow-black/5 transition-all duration-500 group">
             <div className="flex gap-6">
               <div className={`w-14 h-14 rounded-2xl ${notif.bg} ${notif.color} flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110`}>
                 <notif.icon size={24} />
@@ -73,6 +76,54 @@ const Notifications = () => {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {selectedNotif && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedNotif(null)}
+              className="absolute inset-0 bg-brand-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-white rounded-[40px] shadow-2xl p-8 md:p-12 max-w-lg w-full z-10 overflow-hidden"
+            >
+              <button 
+                onClick={() => setSelectedNotif(null)}
+                className="absolute top-6 right-6 w-10 h-10 bg-black/5 hover:bg-brand-red/10 hover:text-brand-red rounded-full flex items-center justify-center transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className={`w-20 h-20 rounded-[24px] ${selectedNotif.bg} ${selectedNotif.color} flex items-center justify-center mb-8`}>
+                <selectedNotif.icon size={36} />
+              </div>
+              
+              <div className="flex items-center gap-2 text-brand-black/40 mb-3">
+                <Calendar size={14} />
+                <span className="text-[11px] font-bold uppercase tracking-widest">{selectedNotif.time}</span>
+              </div>
+              
+              <h2 className="text-2xl font-black text-brand-black mb-4 tracking-tight">{selectedNotif.title}</h2>
+              <p className="text-[15px] font-medium text-brand-black/60 leading-relaxed mb-10">
+                {selectedNotif.message}
+              </p>
+
+              <button 
+                onClick={() => setSelectedNotif(null)}
+                className="w-full h-14 bg-brand-black hover:bg-brand-red text-white rounded-2xl font-black uppercase tracking-widest text-[13px] shadow-xl shadow-black/20 transition-all duration-300"
+              >
+                Acknowledge
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 };
