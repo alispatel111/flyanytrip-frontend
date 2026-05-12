@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CreditCard, UserCircle2, Plane, Building2, Compass, FileText, Mail, Phone, ArrowRight, X, ShieldCheck, CheckCircle2, Bell } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSearchContext } from '../context/SearchContext';
 
 // All tab identifiers used across the app
 const TABS = [
@@ -356,6 +357,7 @@ const AuthModal = ({ isOpen, onClose, type = 'personal' }) => {
 const Navbar = ({ activeTab, setActiveTab }) => {
   // Controls whether the tab row is shown inside the navbar
   const { user, logout } = useAuth();
+  const { isFarePopupOpen } = useSearchContext();
   const navigate = useNavigate();
   const [showNavTabs, setShowNavTabs] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -420,7 +422,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
   return (
     <>
-      <nav className={`${isHome ? `sticky transition-all duration-300 ${isVisible ? 'top-0' : '-top-[80px]'}` : 'relative'} z-[1000] h-[80px] bg-white/70 backdrop-blur-2xl border-b border-black/5`}>
+      <nav className={`${isHome ? `sticky transition-all duration-300 ${isVisible ? 'top-0' : '-top-[80px]'}` : `sticky transition-all duration-500 ${isVisible && !isFarePopupOpen ? 'top-0' : '-top-[100px] opacity-0 pointer-events-none'}`} z-[1100] h-[80px] bg-white/70 backdrop-blur-2xl border-b border-black/5`}>
         <div className="max-w-[1400px] w-full mx-auto px-8 grid grid-cols-3 h-full items-center">
 
           {/* Left: Logo */}

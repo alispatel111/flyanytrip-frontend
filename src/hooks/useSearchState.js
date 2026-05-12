@@ -77,6 +77,9 @@ export const useSearchState = () => {
   // Holds any validation error message shown to the user
   const [searchError, setSearchError] = useState('');
 
+  // UI state for modals/popups
+  const [isFarePopupOpen, setIsFarePopupOpen] = useState(false);
+
   /**
    * Fetches the lowest fares for the month based on the current selection.
    */
@@ -458,6 +461,7 @@ export const useSearchState = () => {
     calendarFares, fetchingFares, fetchCalendarFares,
     searchError, setSearchError,
     filters, setFilters,
+    isFarePopupOpen, setIsFarePopupOpen,
     handleAirportSearch, selectAirport, swapAirports, handleSearch,
     navigate
   };

@@ -33,7 +33,7 @@ const SearchComponents = {
  */
 const SearchResults = () => {
   const searchState = useSearchContext();
-  const { results, activeTab, searchError, searching } = searchState;
+  const { results, activeTab, searchError, searching, isFarePopupOpen } = searchState;
   const navigate = useNavigate();
   const [isSticky, setIsSticky] = React.useState(false);
   
@@ -60,9 +60,9 @@ const SearchResults = () => {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className={`border-b border-black/5 shadow-sm sticky top-0 z-[900] transition-all duration-300 ${
+        className={`border-b border-black/5 shadow-sm sticky top-0 z-[1000] transition-all duration-500 ${
           isSticky ? 'py-4 bg-white shadow-xl' : 'pt-10 pb-8 bg-white'
-        }`}
+        } ${isFarePopupOpen ? 'hidden' : 'block'}`}
       >
         <div className={`mx-auto px-6 transition-all duration-500 ${isSticky ? 'max-w-full' : 'max-w-[1440px]'}`}>
           {searchError && !isSticky && (

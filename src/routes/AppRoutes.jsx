@@ -15,6 +15,8 @@ import BookingReview from '../pages/BookingReview';
 import TravellerDetails from '../pages/TravellerDetails';
 import SeatSelection from '../pages/SeatSelection';
 import Addons from '../pages/Addons';
+import CheckoutPage from '../pages/CheckoutPage';
+import FinalBookingReview from '../pages/FinalBookingReview';
 import Payment from '../pages/Payment';
 import BookingSuccess from '../pages/BookingSuccess';
 import BookingFailed from '../pages/BookingFailed';
@@ -63,10 +65,12 @@ const AppRoutes = () => {
 
       {/* Flight Flow Routes */}
       <Route path="/flight-details" element={<FlightDetails />} />
-      <Route path="/booking-review" element={<BookingReview />} />
+      <Route path="/flight-review" element={<BookingReview />} />
+      <Route path="/booking-review" element={<FinalBookingReview />} />
       <Route path="/traveller-details" element={<TravellerDetails />} />
       <Route path="/seat-selection" element={<SeatSelection />} />
       <Route path="/addons" element={<Addons />} />
+      <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/payment" element={<Payment />} />
       <Route path="/booking-success" element={<BookingSuccess />} />
       <Route path="/booking-failed" element={<BookingFailed />} />

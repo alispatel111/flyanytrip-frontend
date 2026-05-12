@@ -13,10 +13,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, Compass, Globe2, MapPin, ShieldCheck, ArrowRightLeft, Search, X, ChevronUp } from 'lucide-react';
+import { Plane, Compass, Globe2, MapPin, ShieldCheck, ArrowRightLeft, Search, X, ChevronUp, ArrowRight, Loader2 } from 'lucide-react';
 import FlightFilters from '../flights/FlightFilters';
 import FlightSortBar from '../flights/FlightSortBar';
 import { useSearchContext } from '../../context/SearchContext';
+import FlightDetailsTabs from '../flights/FlightDetailsTabs';
+import { FareUpdateModal, SoldOutModal, FlightFareModal } from '../flights/FlightModals';
+import api from '../../services/api';
 
 const AirlineLogo = ({ airlineCode, airlineName }) => {
   const [hasError, setHasError] = React.useState(false);
@@ -97,14 +100,13 @@ const FlightSkeleton = () => (
   </div>
 );
 
-const ResultCard = ({ r, navigate }) => (
-  <div className="bg-white rounded-3xl border border-black/5 shadow-sm overflow-hidden transition-all hover:shadow-xl group hover:border-brand-red/20">
+const ResultCard = ({ r, isExpanded, onToggleExpand, onContinue, revalidating }) => (
+  <div className={`bg-white rounded-3xl border transition-all ${isExpanded ? 'border-brand-red/30 shadow-2xl ring-4 ring-brand-red/5' : 'border-black/5 shadow-sm hover:shadow-xl hover:border-brand-red/20'} overflow-hidden group`}>
     {r.type === 'flight' && (
       <div className="flex flex-col h-full">
         <div className="flex flex-col md:flex-row flex-1">
           <div className="p-4 md:p-6 flex-1 flex flex-col md:flex-row items-center gap-6 md:gap-8 relative">
             
-            {/* 1. Airline Section (Left) */}
             <div className="flex items-center gap-4 w-full md:w-[220px] shrink-0">
               <AirlineLogo airlineCode={r.airlineCode} airlineName={r.airline} />
               <div className="flex flex-col">
@@ -113,7 +115,6 @@ const ResultCard = ({ r, navigate }) => (
               </div>
             </div>
 
-            {/* 2. Timing Section (Center) */}
             <div className="flex-1 flex items-center justify-between w-full mt-4 md:mt-0">
               <div className="text-right flex flex-col items-end">
                 <div className="text-2xl font-black text-brand-black mb-1">{r.time}</div>
@@ -140,33 +141,34 @@ const ResultCard = ({ r, navigate }) => (
               </div>
             </div>
 
-            {/* Class Tag (Absolute on desktop right side) */}
             <div className="hidden lg:block absolute top-6 right-6">
                <span className="bg-black/[0.04] text-brand-black/60 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider">{r.class}</span>
             </div>
           </div>
 
-          {/* 3. Price & CTA Section (Right) */}
-          <div className="border-t md:border-t-0 md:border-l border-black/5 p-4 md:p-6 w-full md:w-[220px] shrink-0 flex flex-col justify-center items-center text-center group-hover:bg-brand-red/[0.01] transition-colors relative">
+          <div className={`border-t md:border-t-0 md:border-l border-black/5 p-4 md:p-6 w-full md:w-[220px] shrink-0 flex flex-col justify-center items-center text-center transition-colors relative ${isExpanded ? 'bg-brand-red/[0.03]' : 'group-hover:bg-brand-red/[0.01]'}`}>
             <div className="text-[10px] font-bold text-brand-black/40 uppercase tracking-wider mb-1">Ticket Price</div>
             <div className="text-[26px] font-black text-brand-black mb-4 leading-none">₹{r.price}</div>
             <button 
-              onClick={() => navigate('/booking-review', { state: { flight: r } })}
-              className="w-full bg-brand-black text-white h-11 rounded-xl text-sm font-bold shadow-md hover:bg-brand-red hover:shadow-lg transition-all active:scale-95 whitespace-nowrap"
+              onClick={() => onToggleExpand(r)}
+              className="w-full h-11 rounded-xl text-sm font-bold shadow-md transition-all active:scale-95 whitespace-nowrap flex items-center justify-center gap-2 bg-brand-black text-white hover:bg-brand-red"
             >
               Select Flight
             </button>
           </div>
         </div>
-
-        {/* 4. Extra Info Row (Bottom) */}
-        <div className="bg-[#FFF8F8] border-t border-brand-red/10 px-4 md:px-6 py-3 flex flex-wrap gap-2 items-center justify-between mt-auto">
+        <div className="bg-[#FFF8F8] border-t border-brand-red/10 px-4 md:px-6 py-3 flex flex-wrap gap-2 items-center justify-between mt-auto cursor-pointer" onClick={() => onToggleExpand(r)}>
           <div className="text-[11px] font-bold text-brand-red uppercase tracking-wider">
             {r.promo || 'Use Code FLYNEW for 10% OFF'}
           </div>
-          <div className="text-[10px] font-bold text-brand-black/50 uppercase tracking-wider flex flex-wrap gap-4">
-            <span className="flex items-center gap-1.5">🧳 {r.baggage || '15 KGS CHECK-IN'}</span>
-            <span className="flex items-center gap-1.5 text-[#448AFF]">🛡️ PARTIALLY REFUNDABLE</span>
+          <div className="flex items-center gap-4">
+            <div className="text-[10px] font-bold text-brand-black/50 uppercase tracking-wider flex flex-wrap gap-4">
+              <span className="flex items-center gap-1.5">🧳 {r.baggage || '15 KGS CHECK-IN'}</span>
+              <span className="flex items-center gap-1.5 text-[#448AFF]">🛡️ PARTIALLY REFUNDABLE</span>
+            </div>
+            <div className="text-[11px] font-bold text-brand-red flex items-center gap-1">
+              VIEW DETAILS <ChevronUp size={14} className="rotate-180" />
+            </div>
           </div>
         </div>
       </div>
@@ -266,24 +268,22 @@ const ResultCard = ({ r, navigate }) => (
   </div>
 );
 
-/**
- * Displays all search results as an animated, scrollable list.
- * Each result is rendered with a different card layout based on its type.
- *
- * @param results   - Array of result objects returned from the search
- * @param activeTab - The current search tab (e.g. 'flights', 'tours')
- * @param searching - Whether a search is currently in progress
- */
 const ResultsSection = () => {
-  const { results, activeTab, searching, filters, setFilters, navigate } = useSearchContext();
+  const { results, activeTab, searching, filters, setFilters, navigate, isFarePopupOpen, setIsFarePopupOpen } = useSearchContext();
   const showSkeletons = searching && activeTab === 'flights';
   const skeletonArray = Array(6).fill(0);
 
-  // Filter & Sort State
   const [sortOption, setSortOption] = React.useState('cheapest');
   const [quickFilters, setQuickFilters] = React.useState([]);
   const [showMobileFilters, setShowMobileFilters] = React.useState(false);
   const [showScrollTop, setShowScrollTop] = React.useState(false);
+
+  const [expandedId, setExpandedId] = React.useState(null);
+  const [revalidatingId, setRevalidatingId] = React.useState(null);
+  
+  const [fareUpdateModal, setFareUpdateModal] = React.useState({ open: false, oldFare: 0, newFare: 0, flight: null });
+  const [soldOutModal, setSoldOutModal] = React.useState(false);
+  const [fareModal, setFareModal] = React.useState({ open: false, flight: null });
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -297,7 +297,64 @@ const ResultsSection = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Memoized Filtering & Sorting Logic
+  const toggleExpand = (flight) => {
+    setFareModal({ open: true, flight });
+    setIsFarePopupOpen(true);
+  };
+
+  const handleContinue = async (flight) => {
+    setRevalidatingId(flight.id);
+    try {
+      const response = await api.post('/api/flights/fare-quote', {
+        traceId: flight.traceId,
+        resultIndex: flight.resultIndex,
+        tokenId: flight.tokenId
+      });
+
+      if (response.data.success) {
+        const quoteData = response.data.data;
+        const responseData = quoteData?.responseData || quoteData;
+        const status = responseData?.Response?.ResponseStatus;
+        const error = responseData?.Response?.Error;
+
+        if (status === 3 || (error && error.ErrorCode !== 0)) {
+           setSoldOutModal(true);
+           return;
+        }
+
+        const newFareObj = responseData?.Response?.Results?.Fare;
+        const newFare = Math.ceil(newFareObj?.OfferedFare || newFareObj?.PublishedFare || 0);
+        const oldFare = parseInt(String(flight.price).replace(/,/g, ''), 10);
+
+        if (newFare !== oldFare && newFare > 0) {
+           setFareUpdateModal({
+              open: true,
+              oldFare: oldFare.toLocaleString('en-IN'),
+              newFare: newFare.toLocaleString('en-IN'),
+              flight: { ...flight, price: newFare.toLocaleString('en-IN'), rawQuote: responseData }
+           });
+        } else {
+           setIsFarePopupOpen(false);
+           navigate('/checkout', { state: { flight: { ...flight, rawQuote: responseData } } });
+        }
+      } else {
+        alert('Revalidation failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Revalidation error:', err);
+      alert('Error validating flight details. Please try again.');
+    } finally {
+      setRevalidatingId(null);
+    }
+  };
+
+  const acceptFareUpdate = () => {
+     const { flight } = fareUpdateModal;
+     setFareUpdateModal({ open: false, oldFare: 0, newFare: 0, flight: null });
+     setIsFarePopupOpen(false);
+     navigate('/checkout', { state: { flight } });
+  };
+
   const displayResults = React.useMemo(() => {
     if (activeTab !== 'flights') return results;
 
@@ -328,7 +385,6 @@ const ResultsSection = () => {
       return 0;
     };
 
-    // 1. Filter
     let filtered = results.filter(r => {
       if (r.type !== 'flight') return true;
 
@@ -337,7 +393,6 @@ const ResultsSection = () => {
 
       if (filters.airlines.length > 0 && !filters.airlines.includes(r.airline)) return false;
 
-      // Extract number of stops from r.stops or r.raw.Segments
       let numStops = 0;
       if (r.stops !== undefined && r.stops !== null) {
         numStops = parseInt(r.stops, 10) || 0;
@@ -357,14 +412,12 @@ const ResultsSection = () => {
       const arrSlot = getSlot(parseHour(r.arrival));
       if (filters.arrTime.length > 0 && !filters.arrTime.includes(arrSlot)) return false;
 
-      // Quick Filters
       if (quickFilters.includes('nonstop') && numStops !== 0) return false;
       if (quickFilters.includes('morning') && depSlot !== 'morning') return false;
 
       return true;
     });
 
-    // 2. Sort
     filtered.sort((a, b) => {
       const pA = parseInt(String(a.price).replace(/,/g, ''), 10) || 0;
       const pB = parseInt(String(b.price).replace(/,/g, ''), 10) || 0;
@@ -405,8 +458,6 @@ const ResultsSection = () => {
 
             {activeTab === 'flights' ? (
               <div className="flex flex-col lg:flex-row gap-8 items-start relative">
-                {/* Left Sidebar - Filters */}
-                {/* On mobile, it acts as a full-screen drawer */}
                 <div className={`w-full lg:w-[320px] shrink-0 transition-transform z-50 ${showMobileFilters ? 'fixed inset-0 bg-black/50 backdrop-blur-sm p-4 flex flex-col justify-end' : 'hidden lg:block lg:sticky lg:top-[88px] lg:h-[calc(100vh-88px)]'}`}>
                   {showMobileFilters && (
                     <div className="absolute inset-0" onClick={() => setShowMobileFilters(false)} />
@@ -429,21 +480,9 @@ const ResultsSection = () => {
                       </div>
                     )}
                     <FlightFilters results={results} filters={filters} setFilters={setFilters} />
-                    
-                    {showMobileFilters && (
-                      <div className="mt-6 pt-4 border-t border-black/5 sticky bottom-0 bg-white lg:hidden">
-                        <button 
-                          onClick={() => setShowMobileFilters(false)}
-                          className="w-full bg-brand-red text-white py-4 rounded-xl font-bold shadow-lg"
-                        >
-                          Show {displayResults.length} Flights
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                {/* Right Content - Sort Bar & Flight Cards */}
                 <div className="flex-1 w-full min-w-0">
                   <FlightSortBar 
                     sortOption={sortOption} setSortOption={setSortOption} 
@@ -457,12 +496,17 @@ const ResultsSection = () => {
                     ) : displayResults.length > 0 ? (
                       displayResults.map((r, idx) => (
                         <motion.div
-                          key={`flight-${idx}-${r.id || 'new'}`}
+                          key={`flight-card-${idx}-${r.id || 'no-id'}`}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.03 }}
                         >
-                          <ResultCard r={r} navigate={navigate} />
+                          <ResultCard 
+                            r={r} 
+                            onToggleExpand={toggleExpand}
+                            onContinue={handleContinue}
+                            revalidating={revalidatingId === r.id}
+                          />
                         </motion.div>
                       ))
                     ) : (
@@ -488,13 +532,38 @@ const ResultsSection = () => {
             ) : (
               <div className="flex flex-col gap-6">
                 {results.map((r, idx) => (
-                  <ResultCard key={`tour-${idx}-${r.id || 'new'}`} r={r} navigate={navigate} />
+                  <ResultCard key={`result-${idx}-${r.id || 'new'}`} r={r} />
                 ))}
               </div>
             )}
           </div>
         </motion.section>
       )}
+
+      <FareUpdateModal 
+        key="fare-update-modal"
+        isOpen={fareUpdateModal.open}
+        onClose={() => setFareUpdateModal({ open: false, oldFare: 0, newFare: 0, flight: null })}
+        onAccept={acceptFareUpdate}
+        oldFare={fareUpdateModal.oldFare}
+        newFare={fareUpdateModal.newFare}
+      />
+      <SoldOutModal 
+        key="sold-out-modal"
+        isOpen={soldOutModal}
+        onClose={() => setSoldOutModal(false)}
+      />
+      <FlightFareModal 
+        key="fare-options-modal"
+        isOpen={fareModal.open}
+        onClose={() => {
+           setFareModal({ open: false, flight: null });
+           setIsFarePopupOpen(false);
+        }}
+        flight={fareModal.flight}
+        onContinue={handleContinue}
+        revalidating={revalidatingId === (fareModal.flight?.id)}
+      />
 
       <AnimatePresence>
         {showScrollTop && (
