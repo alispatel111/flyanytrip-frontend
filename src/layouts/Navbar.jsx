@@ -420,7 +420,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
   return (
     <>
-      <nav className={`sticky z-[1000] h-[80px] bg-white/70 backdrop-blur-2xl border-b border-black/5 transition-all duration-300 ${isVisible ? 'top-0' : '-top-[80px]'}`}>
+      <nav className={`${isHome ? `sticky transition-all duration-300 ${isVisible ? 'top-0' : '-top-[80px]'}` : 'relative'} z-[1000] h-[80px] bg-white/70 backdrop-blur-2xl border-b border-black/5`}>
         <div className="max-w-[1400px] w-full mx-auto px-8 grid grid-cols-3 h-full items-center">
 
           {/* Left: Logo */}
