@@ -71,6 +71,7 @@ const AppRoutes = () => {
       <Route path="/seat-selection" element={<SeatSelection />} />
       <Route path="/addons" element={<Addons />} />
       <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/checkout/:route" element={<CheckoutPage />} />
       <Route path="/payment" element={<Payment />} />
       <Route path="/booking-success" element={<BookingSuccess />} />
       <Route path="/booking-failed" element={<BookingFailed />} />

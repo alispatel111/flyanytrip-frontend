@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
-import { FareUpdateModal, SoldOutModal } from '../features/flights/FlightModals';
+import { SoldOutModal } from '../features/flights/FlightModals';
 
 const FinalBookingReview = () => {
   const navigate = useNavigate();
@@ -22,7 +22,6 @@ const FinalBookingReview = () => {
   const [agreed, setAgreed] = useState(false);
   
   const [fareQuote, setFareQuote] = useState(null);
-  const [fareUpdateModal, setFareUpdateModal] = useState({ open: false, oldFare: 0, newFare: 0 });
   const [soldOutModal, setSoldOutModal] = useState(false);
 
   useEffect(() => {
@@ -92,14 +91,9 @@ const FinalBookingReview = () => {
 
         const newFareObj = responseData?.Response?.Results?.Fare;
         const newFare = Math.ceil(newFareObj?.OfferedFare || newFareObj?.PublishedFare || 0);
-        const currentFare = Math.ceil(initialFare.OfferedFare || initialFare.PublishedFare || 0);
-
-        if (newFare !== currentFare && Math.abs(newFare - currentFare) > 10) {
-          setFareUpdateModal({ open: true, oldFare: currentFare, newFare: newFare });
-          setFareQuote(responseData?.Response?.Results);
-          setRevalidating(false);
-          return;
-        }
+        
+        // Update local fare quote but proceed to payment directly
+        setFareQuote(responseData?.Response?.Results);
 
         // Step 2: Create Payment Order
         const orderRes = await api.post('/api/payment/create-order', {
@@ -436,16 +430,6 @@ const FinalBookingReview = () => {
 
       </div>
 
-      <FareUpdateModal 
-        isOpen={fareUpdateModal.open} 
-        onClose={() => setFareUpdateModal({ ...fareUpdateModal, open: false })}
-        oldFare={fareUpdateModal.oldFare}
-        newFare={fareUpdateModal.newFare}
-        onAccept={() => {
-          setFareUpdateModal({ ...fareUpdateModal, open: false });
-          handleProceedToPayment(); // Retry with new fare
-        }}
-      />
 
       <SoldOutModal 
         isOpen={soldOutModal} 

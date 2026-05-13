@@ -1,72 +1,8 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ArrowRight, X, ShieldAlert, Check, Info, Luggage, Armchair, Coffee, Zap, Plane } from 'lucide-react';
+import { AlertCircle, ArrowRight, X, ShieldAlert, Check, Info, Luggage, Armchair, Coffee, Zap, Plane, Loader2 } from 'lucide-react';
+import api from '../../services/api';
 
-export const FareUpdateModal = ({ isOpen, onClose, onAccept, oldFare, newFare }) => {
-  if (!isOpen) return null;
-
-  return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        />
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative bg-white rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl"
-        >
-          <div className="p-8">
-            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-6">
-              <AlertCircle size={32} className="text-amber-500" />
-            </div>
-            
-            <h3 className="text-2xl font-black text-brand-black mb-2 tracking-tight">Fare Updated!</h3>
-            <p className="text-brand-black/60 font-medium mb-8">
-              The airline has updated the fare for this flight. Please review the updated pricing before proceeding.
-            </p>
-
-            <div className="bg-black/[0.02] rounded-2xl p-6 mb-8 border border-black/5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="text-center flex-1">
-                  <div className="text-[11px] font-bold text-brand-black/40 uppercase tracking-widest mb-1">Old Fare</div>
-                  <div className="text-xl font-black text-brand-black/40 line-through">₹{oldFare}</div>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-black/5">
-                  <ArrowRight size={20} className="text-brand-red" />
-                </div>
-                <div className="text-center flex-1">
-                  <div className="text-[11px] font-bold text-brand-red uppercase tracking-widest mb-1">New Fare</div>
-                  <div className="text-2xl font-black text-brand-black">₹{newFare}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button 
-                onClick={onClose}
-                className="flex-1 h-14 rounded-2xl font-bold text-brand-black border border-black/10 hover:bg-black/5 transition-all"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={onAccept}
-                className="flex-1 h-14 rounded-2xl font-bold text-white bg-brand-red shadow-lg shadow-brand-red/20 hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95"
-              >
-                Accept & Continue
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
-  );
-};
 
 export const SoldOutModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -112,6 +48,58 @@ export const SoldOutModal = ({ isOpen, onClose }) => {
 
 export const FlightFareModal = ({ isOpen, onClose, flight, onContinue, revalidating }) => {
   const [clickedOptionIdx, setClickedOptionIdx] = React.useState(null);
+  const [liveData, setLiveData] = React.useState({ baggage: null, rules: null, loading: false });
+
+  useEffect(() => {
+    if (isOpen && flight) {
+      fetchLiveData();
+    } else {
+      setLiveData({ baggage: null, rules: null, loading: false });
+    }
+  }, [isOpen, flight]);
+
+  const fetchLiveData = async () => {
+    setLiveData(prev => ({ ...prev, loading: true }));
+    console.log("Fetching live data for flight:", flight.flightNo);
+    try {
+      const [rulesRes, ssrRes] = await Promise.all([
+        api.post('/api/flights/fare-rule', {
+          traceId: flight.traceId,
+          resultIndex: flight.resultIndex,
+          tokenId: flight.tokenId
+        }),
+        api.post('/api/flights/ssr', {
+          traceId: flight.traceId,
+          resultIndex: flight.resultIndex,
+          tokenId: flight.tokenId
+        })
+      ]);
+      
+      const rules = rulesRes.data.success ? (rulesRes.data.data?.responseData?.Response?.FareRules || rulesRes.data.data?.Response?.FareRules) : null;
+      const ssrResponse = ssrRes.data.success ? (ssrRes.data.data?.responseData?.Response || ssrRes.data.data?.Response) : null;
+
+      console.log("Live Rules API Data:", rules);
+      
+      if (ssrResponse?.Baggage && Array.isArray(ssrResponse.Baggage)) {
+        console.log("API SSR: Extra baggage pricing found!", ssrResponse.Baggage);
+        const baggageOptions = Array.isArray(ssrResponse.Baggage[0]) ? ssrResponse.Baggage[0] : ssrResponse.Baggage;
+        baggageOptions.forEach((item, index) => {
+          console.log(`Option ${index + 1}: ${item.Weight || item.WeightText} for ₹${item.Price || 0}`);
+        });
+      } else {
+        console.log("API SSR: No extra baggage options available from this airline.");
+      }
+
+      setLiveData({
+        rules: rules,
+        baggage: ssrResponse?.Baggage,
+        loading: false
+      });
+    } catch (err) {
+      console.error("Modal Data Fetch Error:", err);
+      setLiveData(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   useEffect(() => {
     if (!revalidating) {
@@ -132,9 +120,11 @@ export const FlightFareModal = ({ isOpen, onClose, flight, onContinue, revalidat
   if (!isOpen || !flight) return null;
 
   const getMiniRule = (type) => {
-    // Check both PascalCase and camelCase
-    const rules = (flight.MiniFareRules || flight.miniFareRules)?.[0] || [];
-    const rule = rules.find(r => (r.Type || r.type || '').toLowerCase() === type.toLowerCase());
+    // Prefer live rules if available
+    const targetRules = liveData.rules || (flight.MiniFareRules || flight.miniFareRules)?.[0] || [];
+    const rule = Array.isArray(targetRules) 
+      ? targetRules.find(r => (r.Type || r.type || '').toLowerCase() === type.toLowerCase())
+      : null;
     return rule ? (rule.Details || rule.details) : null;
   };
 
@@ -145,31 +135,44 @@ export const FlightFareModal = ({ isOpen, onClose, flight, onContinue, revalidat
   const cleanPrice = Number(String(flight.price).replace(/,/g, '')) || 0;
 
   const fareBreakdown = flight.FareBreakdown || flight.fareBreakdown;
-  const cabinBaggage = fareBreakdown?.[0]?.SegmentDetails?.[0]?.CabinBaggage?.FreeText || '7 KG';
-  const checkInBaggage = fareBreakdown?.[0]?.SegmentDetails?.[0]?.CheckedInBaggage?.FreeText || '15 KG';
+  
+  // Extract baggage from liveData.baggage more safely
+  const getBaggageFromLive = () => {
+    if (!liveData.baggage || !Array.isArray(liveData.baggage)) return null;
+    const firstOption = Array.isArray(liveData.baggage[0]) ? liveData.baggage[0][0] : liveData.baggage[0];
+    return firstOption;
+  };
+
+  const liveBaggage = getBaggageFromLive();
+  const cabinBaggage = liveBaggage?.CabinBaggage || fareBreakdown?.[0]?.SegmentDetails?.[0]?.CabinBaggage?.FreeText || '7 KG';
+  const checkInBaggage = liveBaggage?.Weight || fareBreakdown?.[0]?.SegmentDetails?.[0]?.CheckedInBaggage?.FreeText || '15 KG';
+
+  // Helper to format price with commas and round up
+  const formatPrice = (p) => Math.ceil(p).toLocaleString('en-IN');
+  const displayPrice = formatPrice(cleanPrice);
 
   const fareOptions = [
     {
       name: 'SAVER',
-      price: flight.price,
+      price: displayPrice,
       color: '#448AFF',
       benefits: [
-        { icon: <Luggage size={14} />, text: `${cabinBaggage} Cabin Baggage` },
-        { icon: <Luggage size={14} />, text: `${checkInBaggage} Check-in Baggage` },
-        { icon: <Info size={14} />, text: `Cancellation fee starts at ${cancelFee}` },
-        { icon: <Info size={14} />, text: `Date Change fee starts at ${changeFee}` },
+        { icon: <Luggage size={14} />, text: liveData.loading ? 'Fetching baggage...' : `${cabinBaggage} Cabin Baggage` },
+        { icon: <Luggage size={14} />, text: liveData.loading ? 'Fetching baggage...' : `${checkInBaggage} Check-in Baggage` },
+        { icon: <Info size={14} />, text: liveData.loading ? 'Updating rules...' : `Cancellation fee starts at ${cancelFee}` },
+        { icon: <Info size={14} />, text: liveData.loading ? 'Updating rules...' : `Date Change fee starts at ${changeFee}` },
         { icon: <Armchair size={14} />, text: 'Chargeable Seats' },
         { icon: <Coffee size={14} />, text: 'Chargeable Meals' },
       ]
     },
     {
       name: 'ANYTRIP SPECIAL',
-      price: flight.price,
+      price: displayPrice,
       color: '#E61E2D',
       isSpecial: true,
       benefits: [
-        { icon: <Luggage size={14} />, text: `${cabinBaggage} Cabin Baggage` },
-        { icon: <Luggage size={14} />, text: `${checkInBaggage} Check-in Baggage` },
+        { icon: <Luggage size={14} />, text: liveData.loading ? '...' : `${cabinBaggage} Cabin Baggage` },
+        { icon: <Luggage size={14} />, text: liveData.loading ? '...' : `${checkInBaggage} Check-in Baggage` },
         { icon: <Zap size={14} />, text: 'Exclusive Discount Applied' },
         { icon: <ShieldAlert size={14} />, text: 'Trip Secure Included' },
         { icon: <Armchair size={14} />, text: 'Chargeable Seats' },
@@ -178,11 +181,11 @@ export const FlightFareModal = ({ isOpen, onClose, flight, onContinue, revalidat
     },
     {
       name: 'FLEXI',
-      price: flight.price,
+      price: displayPrice,
       color: '#00B894',
       benefits: [
-        { icon: <Luggage size={14} />, text: `${cabinBaggage} Cabin Baggage` },
-        { icon: <Luggage size={14} />, text: `${checkInBaggage} Check-in Baggage` },
+        { icon: <Luggage size={14} />, text: liveData.loading ? '...' : `${cabinBaggage} Cabin Baggage` },
+        { icon: <Luggage size={14} />, text: liveData.loading ? '...' : `${checkInBaggage} Check-in Baggage` },
         { icon: <Info size={14} />, text: 'Lower Cancellation fee' },
         { icon: <Info size={14} />, text: 'Lower Date Change fee' },
         { icon: <Armchair size={14} />, text: 'Free Seats Included' },
@@ -211,7 +214,13 @@ export const FlightFareModal = ({ isOpen, onClose, flight, onContinue, revalidat
           {/* Modal Header */}
           <div className="p-6 bg-white border-b border-black/5 flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center gap-4">
-               <h3 className="text-xl font-black text-brand-black tracking-tight">Flight Details and Fare Options available for you!</h3>
+               <h3 className="text-xl font-black text-brand-black tracking-tight">Flight Details and Fare Options</h3>
+               {liveData.loading && (
+                 <div className="flex items-center gap-2 bg-brand-red/5 px-3 py-1 rounded-full">
+                    <Loader2 size={12} className="text-brand-red animate-spin" />
+                    <span className="text-[10px] font-black text-brand-red uppercase tracking-widest">Fetching Live API Data...</span>
+                 </div>
+               )}
             </div>
             <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors">
               <X size={24} className="text-brand-black/40" />

@@ -279,8 +279,8 @@ export const useSearchState = () => {
         filters: initialFilters // Use fresh filters in the new search URL
       };
       
-      const encodedData = btoa(JSON.stringify(searchData));
-      navigate(`/flights/${from.iata}-${to.iata}?data=${encodedData}`, { replace: true });
+      const encodedData = btoa(encodeURIComponent(JSON.stringify(searchData)).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
+      navigate(`/flights/${from.iata}-${to.iata}?data=${encodeURIComponent(encodedData)}`, { replace: true });
       return;
     }
 
@@ -332,7 +332,6 @@ export const useSearchState = () => {
     if (autoSearchTimeoutRef.current) clearTimeout(autoSearchTimeoutRef.current);
 
     autoSearchTimeoutRef.current = setTimeout(() => {
-      console.log("Triggering auto-search with current state:", { from, to, departureDate, filters });
       handleSearch();
     }, 500); // 500ms debounce
 

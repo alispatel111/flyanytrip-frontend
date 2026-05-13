@@ -12,7 +12,31 @@ import api from '../services/api';
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { flight: initialFlight } = location.state || {};
+  const queryParams = new URLSearchParams(location.search);
+  const dataParam = queryParams.get('data');
+
+  // Decode flight from URL if state is missing
+  let flightFromUrl = null;
+  if (dataParam) {
+    try {
+      // Decode URL-encoded base64 and handle Unicode
+      const decodedData = decodeURIComponent(atob(dataParam).split('').map((c) => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      flightFromUrl = JSON.parse(decodedData);
+    } catch (e) {
+      console.error("Error decoding flight data from URL:", e);
+      // Fallback for simple base64 if the above fails
+      try {
+        flightFromUrl = JSON.parse(atob(dataParam));
+      } catch (err) {
+        console.error("Fallback decoding also failed:", err);
+      }
+    }
+  }
+
+  const { flight: initialFlightState } = location.state || {};
+  const initialFlight = initialFlightState || flightFromUrl;
 
   // Core Data State
   const [flight, setFlight] = useState(initialFlight);
@@ -78,14 +102,25 @@ const CheckoutPage = () => {
         if (ruleRes.data.success) {
           const rData = ruleRes.data.data?.Response?.FareRules || ruleRes.data.data?.responseData?.Response?.FareRules;
           setFareRule(rData);
-          console.log('fetch api fare rules sucess', rData);
         } else {
           console.error('fetch api fare rules failed', ruleRes.data);
         }
         if (ssrRes.data.success) {
-          const baggageData = ssrRes.data.data?.Baggage?.[0] || [];
-          console.log('fetch api baggage sucess', baggageData);
-          setSsrData(ssrRes.data.data);
+          const sData = ssrRes.data.data?.Response || ssrRes.data.data?.responseData?.Response || ssrRes.data.data;
+          // TBO ResponseStatus: 1 = Success, 4 = Failed/No Data
+          if (sData?.ResponseStatus === 1) {
+            setSsrData(sData);
+            if (sData?.SeatDynamic?.[0]?.SegmentSeat?.[0]?.RowSeats?.length > 0) {
+              console.log('%c [API SUCCESS] LIVE SEAT MAP LOADED! ', 'background: #27ae60; color: #fff; font-weight: bold; padding: 2px 5px; rounded: 3px;');
+              console.log('Seat Data:', sData.SeatDynamic[0].SegmentSeat[0].RowSeats);
+            } else {
+              console.log('%c [API INFO] SEAT DATA NOT FOUND IN SUCCESS RESPONSE. USING DEFAULT MAP. ', 'background: #f39c12; color: #fff; font-weight: bold; padding: 2px 5px; rounded: 3px;');
+            }
+          } else {
+            console.log('%c [API NOTICE] STATUS 4: AIRLINE HAS NO SSR DATA (SEATS/MEALS) FOR THIS FLIGHT. ', 'background: #e74c3c; color: #fff; font-weight: bold; padding: 2px 5px; rounded: 3px;');
+            console.log('Note: We are using a default layout for testing so the UI does not look empty.');
+            setSsrData(null);
+          }
         }
       } catch (err) {
         console.error("Checkout Data Fetch Error:", err);
@@ -103,12 +138,30 @@ const CheckoutPage = () => {
 
   // Price Calculations
   const formatPrice = (p) => Math.ceil(p || 0).toLocaleString('en-IN');
-  const fareData = fareQuote?.Fare || flight?.raw?.Fare || {};
-  const baseFare = Math.ceil(fareData.BaseFare || 0);
-  const tax = Math.ceil(fareData.Tax || 0);
+  const fareData = fareQuote?.Fare || {};
+  const baseFare = Math.ceil(fareData.BaseFare || (parseFloat(String(flight.price || 0).replace(/,/g, '')) * 0.7) || 0);
+  const tax = Math.ceil(fareData.Tax || (parseFloat(String(flight.price || 0).replace(/,/g, '')) * 0.3) || 0);
   const otherCharges = 0;
   const convenienceFee = 0;
   
+  // Extract dynamic flight details from fareQuote if available
+  const apiSegments = fareQuote?.Segments?.[0] || [];
+  const firstSegment = apiSegments[0];
+  const lastSegment = apiSegments[apiSegments.length - 1];
+  
+  const dynamicFlight = {
+    ...flight,
+    segments: apiSegments,
+    time: firstSegment ? new Date(firstSegment.Origin.DepTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : flight.time,
+    arrival: lastSegment ? new Date(lastSegment.Destination.ArrTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : flight.arrival,
+    airline: firstSegment?.Airline?.AirlineName || flight.airline,
+    airlineCode: firstSegment?.Airline?.AirlineCode || flight.airlineCode,
+    flightNo: firstSegment?.Airline?.FlightNumber || flight.flightNo,
+    dur: firstSegment?.Duration ? `${Math.floor(firstSegment.Duration / 60)}h ${firstSegment.Duration % 60}m` : flight.dur,
+    cabinBaggage: fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CabinBaggage?.FreeText || (typeof fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CabinBaggage === 'string' ? fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CabinBaggage : '7 Kgs'),
+    checkInBaggage: fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CheckedInBaggage?.FreeText || (typeof fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CheckedInBaggage === 'string' ? fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CheckedInBaggage : '15 Kgs')
+  };
+
   const ssrSeatTotal = selectedSeats.reduce((acc, s) => acc + (s.price || 0), 0);
   const ssrMealTotal = selectedMeals.reduce((acc, m) => acc + (m.price || 0), 0);
   const ssrBaggageTotal = selectedBaggage.reduce((acc, b) => acc + (b.price || 0), 0);
@@ -199,22 +252,19 @@ const CheckoutPage = () => {
        return;
     }
 
-    // Trigger Final Revalidation & Payment
+    // TEST MODE: Navigate to dynamic Mock Payment page
     setLoading(true);
-    try {
-        const orderRes = await api.post('/api/payment/create-order', {
-           amount: grandTotal,
-           receipt: `rcpt_${Date.now()}`
-        });
-
-        if (orderRes.data.success) {
-           initiateRazorpay(orderRes.data.data);
-        }
-    } catch (err) {
-        alert("Payment initialization failed. Please try again.");
-    } finally {
-        setLoading(false);
-    }
+    setTimeout(() => {
+       setLoading(false);
+       navigate('/payment', { 
+          state: { 
+             flight: dynamicFlight,
+             grandTotal,
+             ssrTotal,
+             travellers
+          } 
+       });
+    }, 1000);
   };
 
   const initiateRazorpay = (order) => {
@@ -297,9 +347,11 @@ const CheckoutPage = () => {
                <div className="bg-black/[0.02] p-4 md:p-6 border-b border-black/5 flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                      <div className="bg-brand-red text-white w-1 h-6 rounded-full" />
-                     <h2 className="text-lg font-black text-brand-black">{flight.fromCity || flight.from || 'New Delhi'} → {flight.toCity || flight.to || 'London'}</h2>
-                     <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">{new Date().toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                     <span className="text-[10px] font-bold text-brand-black/40 uppercase tracking-widest">{flight.layover || 'Non-stop'} • {flight.dur}</span>
+                     <h2 className="text-lg font-black text-brand-black">{dynamicFlight.fromCity || dynamicFlight.from || 'New Delhi'} → {dynamicFlight.toCity || dynamicFlight.to || 'London'}</h2>
+                     <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">
+                        {dynamicFlight.departureDate ? new Date(dynamicFlight.departureDate).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' }) : new Date().toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
+                     </span>
+                     <span className="text-[10px] font-bold text-brand-black/40 uppercase tracking-widest">{dynamicFlight.layover || 'Non-stop'} • {dynamicFlight.dur}</span>
                   </div>
                   <div className="flex items-center gap-4">
                      <span className="text-[10px] font-black text-green-600 uppercase tracking-widest bg-green-50 px-2 py-1 rounded">Cancellation Fees Apply</span>
@@ -312,53 +364,132 @@ const CheckoutPage = () => {
                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-black/[0.03]">
                      <div className="flex items-center gap-3">
                         <div className="w-7 h-7 rounded-md overflow-hidden border border-black/5 p-1 bg-white">
-                           <img src={`/assets/airlines/${flight.airlineCode}.png`} alt={flight.airline} className="w-full h-full object-contain" />
+                           <img src={`/assets/airlines/${dynamicFlight.airlineCode}.png`} alt={dynamicFlight.airline} className="w-full h-full object-contain" />
                         </div>
                         <div>
-                           <div className="text-xs font-black text-brand-black">{flight.airline} <span className="text-brand-black/40 font-bold ml-1">{flight.airlineCode} {flight.flightNo || flight.flight || '6E-2131'}</span></div>
+                           <div className="text-xs font-black text-brand-black">{dynamicFlight.airline} <span className="text-brand-black/40 font-bold ml-1">{dynamicFlight.airlineCode} {dynamicFlight.flightNo}</span></div>
                         </div>
                      </div>
                      <div className="text-[10px] font-black text-brand-black/60">
-                        {flight.class} <span className="text-brand-red mx-1 text-[8px]">›</span> <span className="text-green-600">{flight.selectedFare || 'SAVER'}</span>
+                        {dynamicFlight.class} <span className="text-brand-red mx-1 text-[8px]">›</span> <span className="text-green-600">{dynamicFlight.selectedFare || 'SAVER'}</span>
                      </div>
                   </div>
 
-                  {/* Timeline View - 3 Column Layout (MMT Style) */}
-                  <div className="flex items-start gap-6 mb-6">
-                     {/* Column 1: Times (Left) */}
-                     <div className="flex flex-col justify-between py-1 h-[140px] shrink-0 w-20">
-                        <div className="text-[15px] font-black text-brand-black whitespace-nowrap">{flight.time}</div>
-                        <div className="text-[15px] font-black text-brand-black whitespace-nowrap">{flight.arrival}</div>
-                     </div>
+                  {/* Timeline View - Dynamic Segments (MMT Style) */}
+                  <div className="space-y-0 relative">
+                     {apiSegments && apiSegments.length > 0 ? (
+                        apiSegments.map((segment, idx) => {
+                           const depTime = new Date(segment.Origin.DepTime);
+                           const arrTime = new Date(segment.Destination.ArrTime);
+                           const nextSegment = apiSegments[idx + 1];
+                           
+                           // Calculate layover if there's a next segment
+                           let layoverText = null;
+                           if (nextSegment) {
+                              const nextDepTime = new Date(nextSegment.Origin.DepTime);
+                              const diffMs = nextDepTime - arrTime;
+                              const diffHrs = Math.floor(diffMs / 3600000);
+                              const diffMins = Math.round(((diffMs % 86400000) % 3600000) / 60000);
+                              layoverText = `${diffHrs}h ${diffMins}m layover in ${segment.Destination.Airport.CityName} (${segment.Destination.Airport.AirportCode})`;
+                           }
 
-                     {/* Column 2: Timeline (Center) */}
-                     <div className="flex flex-col items-center py-2 h-[140px] shrink-0">
-                        <div className="w-2.5 h-2.5 rounded-full border-2 border-black/20 bg-white z-10" />
-                        <div className="flex-1 w-[1px] border-l border-dashed border-black/20 my-1" />
-                        <div className="w-2.5 h-2.5 rounded-full border-2 border-black/20 bg-white z-10" />
-                     </div>
+                           return (
+                              <React.Fragment key={idx}>
+                                 {/* Segment Row */}
+                                 <div className="flex items-start gap-6">
+                                    {/* Column 1: Times */}
+                                    <div className="flex flex-col justify-between py-1 h-[100px] shrink-0 w-20">
+                                       <div className="text-[15px] font-black text-brand-black whitespace-nowrap">
+                                          {depTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                       </div>
+                                       <div className="text-[15px] font-black text-brand-black whitespace-nowrap">
+                                          {arrTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                       </div>
+                                    </div>
 
-                     {/* Column 3: Content (Right) */}
-                     <div className="flex flex-col justify-between h-[140px] flex-1">
-                        {/* Departure Content */}
-                        <div className="pt-0.5">
-                           <div className="text-sm font-black text-brand-black">{flight.fromCity || flight.from || 'New Delhi'}</div>
-                           <div className="text-[10px] font-bold text-brand-black/40 mt-1">{flight.fromAirport || `${flight.from || 'Delhi'} Airport`}</div>
-                        </div>
+                                    {/* Column 2: Vertical Line/Dots */}
+                                    <div className="flex flex-col items-center py-2 h-[100px] shrink-0">
+                                       <div className="w-2.5 h-2.5 rounded-full border-2 border-brand-red bg-white z-10" />
+                                       <div className="flex-1 w-[2px] bg-gradient-to-b from-brand-red to-brand-black/20 my-1" />
+                                       <div className="w-2.5 h-2.5 rounded-full border-2 border-brand-black/20 bg-white z-10" />
+                                    </div>
 
-                        {/* Duration Content */}
-                        <div className="flex items-center gap-1.5 py-2">
-                           <div className="text-[10px] font-bold text-brand-black/30 flex items-center gap-1.5">
-                              <Clock size={12} className="text-brand-black/15" /> {flight.dur}
+                                    {/* Column 3: Segment Content */}
+                                    <div className="flex flex-col justify-between h-[100px] flex-1">
+                                       <div>
+                                          <div className="text-sm font-black text-brand-black flex items-center gap-2">
+                                             {segment.Origin.Airport.CityName} 
+                                             <span className="text-[10px] bg-black/5 px-1.5 py-0.5 rounded text-brand-black/40 font-bold">{segment.Origin.Airport.AirportCode}</span>
+                                             {segment.Origin.Airport.Terminal && <span className="text-[9px] text-brand-red font-black uppercase">Terminal {segment.Origin.Airport.Terminal}</span>}
+                                          </div>
+                                          <div className="text-[10px] font-bold text-brand-black/40 mt-0.5">{segment.Origin.Airport.AirportName}</div>
+                                       </div>
+
+                                       <div className="flex items-center gap-1.5">
+                                          <div className="text-[10px] font-bold text-brand-black/30 flex items-center gap-1.5">
+                                             <Clock size={12} className="text-brand-black/15" /> 
+                                             {Math.floor(segment.Duration / 60)}h {segment.Duration % 60}m
+                                             <span className="mx-1">•</span>
+                                             {segment.Airline.AirlineName} {segment.Airline.AirlineCode}-{segment.Airline.FlightNumber}
+                                          </div>
+                                       </div>
+
+                                       <div>
+                                          <div className="text-sm font-black text-brand-black flex items-center gap-2">
+                                             {segment.Destination.Airport.CityName}
+                                             <span className="text-[10px] bg-black/5 px-1.5 py-0.5 rounded text-brand-black/40 font-bold">{segment.Destination.Airport.AirportCode}</span>
+                                             {segment.Destination.Airport.Terminal && <span className="text-[9px] text-brand-red font-black uppercase">Terminal {segment.Destination.Airport.Terminal}</span>}
+                                          </div>
+                                          <div className="text-[10px] font-bold text-brand-black/40 mt-0.5">{segment.Destination.Airport.AirportName}</div>
+                                       </div>
+                                    </div>
+                                 </div>
+
+                                 {/* Layover Row */}
+                                 {layoverText && (
+                                    <div className="flex items-center gap-6 my-4">
+                                       <div className="w-20 shrink-0" />
+                                       <div className="w-2.5 shrink-0 flex justify-center">
+                                          <div className="w-1 h-1 rounded-full bg-brand-black/20" />
+                                       </div>
+                                       <div className="flex-1 bg-brand-red/[0.03] border border-brand-red/5 rounded-xl px-4 py-2 flex items-center gap-3">
+                                          <AlertCircle size={14} className="text-brand-red" />
+                                          <span className="text-[11px] font-black text-brand-black uppercase tracking-tight">{layoverText}</span>
+                                       </div>
+                                    </div>
+                                 )}
+                              </React.Fragment>
+                           );
+                        })
+                     ) : (
+                        /* Fallback to simple view if no segments */
+                        <div className="flex items-start gap-6">
+                           <div className="flex flex-col justify-between py-1 h-[140px] shrink-0 w-20">
+                              <div className="text-[15px] font-black text-brand-black whitespace-nowrap">{dynamicFlight.time}</div>
+                              <div className="text-[15px] font-black text-brand-black whitespace-nowrap">{dynamicFlight.arrival}</div>
+                           </div>
+                           <div className="flex flex-col items-center py-2 h-[140px] shrink-0">
+                              <div className="w-2.5 h-2.5 rounded-full border-2 border-black/20 bg-white z-10" />
+                              <div className="flex-1 w-[1px] border-l border-dashed border-black/20 my-1" />
+                              <div className="w-2.5 h-2.5 rounded-full border-2 border-black/20 bg-white z-10" />
+                           </div>
+                           <div className="flex flex-col justify-between h-[140px] flex-1">
+                              <div className="pt-0.5">
+                                 <div className="text-sm font-black text-brand-black">{dynamicFlight.fromCity || dynamicFlight.from}</div>
+                                 <div className="text-[10px] font-bold text-brand-black/40 mt-1">{dynamicFlight.fromAirport}</div>
+                              </div>
+                              <div className="flex items-center gap-1.5 py-2">
+                                 <div className="text-[10px] font-bold text-brand-black/30 flex items-center gap-1.5">
+                                    <Clock size={12} className="text-brand-black/15" /> {dynamicFlight.dur}
+                                 </div>
+                              </div>
+                              <div className="pb-0.5">
+                                 <div className="text-sm font-black text-brand-black">{dynamicFlight.toCity || dynamicFlight.to}</div>
+                                 <div className="text-[10px] font-bold text-brand-black/40 mt-1">{dynamicFlight.toAirport}</div>
+                              </div>
                            </div>
                         </div>
-
-                        {/* Arrival Content */}
-                        <div className="pb-0.5">
-                           <div className="text-sm font-black text-brand-black">{flight.toCity || flight.to || 'London'}</div>
-                           <div className="text-[10px] font-bold text-brand-black/40 mt-1">{flight.toAirport || `${flight.to || 'London'} Airport`}</div>
-                        </div>
-                     </div>
+                     )}
                   </div>
 
                   {/* Baggage Row - Tighter */}
@@ -369,7 +500,7 @@ const CheckoutPage = () => {
                         </div>
                         <div>
                            <div className="text-[9px] font-black text-brand-black/40 uppercase tracking-widest">Cabin</div>
-                           <div className="text-[11px] font-black text-brand-black">{flight.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CabinBaggage?.FreeText || flight.fareBreakdown?.[0]?.SegmentDetails?.[0]?.CabinBaggage?.FreeText || '7 Kgs'}</div>
+                           <div className="text-[11px] font-black text-brand-black">{dynamicFlight.cabinBaggage}</div>
                         </div>
                      </div>
                      <div className="flex items-center gap-2.5">
@@ -378,7 +509,7 @@ const CheckoutPage = () => {
                         </div>
                         <div>
                            <div className="text-[9px] font-black text-brand-black/40 uppercase tracking-widest">Check-In</div>
-                           <div className="text-[11px] font-black text-brand-black">{flight.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CheckedInBaggage?.FreeText || flight.fareBreakdown?.[0]?.SegmentDetails?.[0]?.CheckedInBaggage?.FreeText || '15 Kgs'}</div>
+                           <div className="text-[11px] font-black text-brand-black">{dynamicFlight.checkInBaggage}</div>
                         </div>
                      </div>
                   </div>
@@ -871,6 +1002,12 @@ const CheckoutPage = () => {
                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-6 overflow-hidden">
                                 <div className="bg-black/[0.02] rounded-2xl p-6 border border-black/5">
                                    <div className="flex flex-col items-center">
+                                      {ssrData?.SeatDynamic?.[0]?.SegmentSeat?.[0]?.RowSeats?.length > 0 && (
+                                         <div className="mb-4 flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full border border-green-100">
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                            <span className="text-[9px] font-black text-green-700 uppercase tracking-widest">Live Airline Seats</span>
+                                         </div>
+                                      )}
                                       <div className="flex gap-4 mb-6 text-[8px] font-black uppercase tracking-widest text-brand-black/40">
                                          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-white border border-black/10"></div> Available</div>
                                          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-brand-red"></div> Selected</div>
@@ -879,46 +1016,60 @@ const CheckoutPage = () => {
 
                                       <div className="w-full max-w-[360px] bg-white rounded-[60px] p-8 border border-black/5 shadow-inner">
                                          <div className="flex flex-col gap-2">
-                                            {(ssrData?.SeatDynamic?.[0]?.SegmentSeat?.[0]?.RowSeats || [1,2,3,4,5,6,7,8]).map((row, idx) => {
-                                               const rowNum = row.RowNo || idx + 1;
-                                               const seats = row.Seats || [];
-                                               return (
-                                                  <div key={idx} className="flex gap-3 items-center justify-center">
-                                                     {seats.length === 0 ? (
-                                                       <>
-                                                         <div className="flex gap-1.5">
-                                                            {['A','B','C'].map(c => (
-                                                               <button key={c} onClick={() => handleSeatClick(`${rowNum}${c}`, 0, 0)} className={`w-8 h-8 rounded-md flex items-center justify-center border-2 transition-all ${selectedSeats.some(s => s?.code === `${rowNum}${c}`) ? 'bg-brand-red border-brand-red text-white' : 'bg-white border-black/5 text-brand-black/10'}`}>
-                                                                  <Armchair size={12} />
-                                                               </button>
-                                                            ))}
-                                                         </div>
-                                                         <div className="w-4 text-[8px] font-black text-brand-black/20 text-center">{rowNum}</div>
-                                                         <div className="flex gap-1.5">
-                                                            {['D','E','F'].map(c => (
-                                                               <button key={c} onClick={() => handleSeatClick(`${rowNum}${c}`, 0, 0)} className={`w-8 h-8 rounded-md flex items-center justify-center border-2 transition-all ${selectedSeats.some(s => s?.code === `${rowNum}${c}`) ? 'bg-brand-red border-brand-red text-white' : 'bg-white border-black/5 text-brand-black/10'}`}>
-                                                                  <Armchair size={12} />
-                                                               </button>
-                                                            ))}
-                                                         </div>
-                                                       </>
-                                                     ) : (
-                                                       seats.map((seat, sIdx) => (
+                                             {(ssrData?.SeatDynamic?.[0]?.SegmentSeat?.[0]?.RowSeats || []).length > 0 ? ssrData.SeatDynamic[0].SegmentSeat[0].RowSeats.map((row, idx) => {
+                                                const rowNum = row.RowNo || idx + 1;
+                                                const seats = row.Seats || [];
+                                                return (
+                                                   <div key={idx} className="flex gap-3 items-center justify-center">
+                                                      {seats.map((seat, sIdx) => (
                                                          <React.Fragment key={sIdx}>
-                                                            {sIdx === Math.floor(seats.length/2) && <div className="w-4 text-[8px] font-black text-brand-black/20 text-center">{rowNum}</div>}
+                                                            {/* Add aisle in the middle of seats */}
+                                                            {sIdx === Math.floor(seats.length / 2) && <div className="w-4 text-[8px] font-black text-brand-black/20 text-center">{rowNum}</div>}
                                                             <button 
-                                                               disabled={!seat.AvailablityType || seat.AvailablityType === 'Sold'}
+                                                               disabled={!seat.AvailablityType || seat.AvailablityType !== 1}
                                                                onClick={() => handleSeatClick(seat.Code, seat.Price, 0)}
+                                                               title={`${seat.Code} - ₹${seat.Price}`}
                                                                className={`w-8 h-8 rounded-md flex flex-col items-center justify-center border-2 transition-all relative group/seat ${selectedSeats.some(s => s?.code === seat.Code) ? 'bg-brand-red border-brand-red text-white' : 'bg-white border-black/5 text-brand-black/40 hover:border-brand-red/30 disabled:bg-black/5 disabled:text-black/10 disabled:cursor-not-allowed'}`}
                                                             >
-                                                               <Armchair size={12} />
+                                                               <span className={`text-[8px] font-black ${selectedSeats.some(s => s?.code === seat.Code) ? 'text-white' : 'text-brand-black'}`}>{seat.Code}</span>
+                                                               <Armchair size={10} className={selectedSeats.some(s => s?.code === seat.Code) ? 'opacity-100' : 'opacity-40'} />
                                                             </button>
                                                          </React.Fragment>
-                                                       ))
-                                                     )}
-                                                  </div>
-                                               );
-                                            })}
+                                                      ))}
+                                                   </div>
+                                                );
+                                             }) : (
+                                                /* Fallback for loading or empty API data */
+                                                [1,2,3,4,5,6,7,8].map((rowNum) => (
+                                                   <div key={rowNum} className="flex gap-3 items-center justify-center">
+                                                      <div className="flex gap-1.5">
+                                                         {['A','B','C'].map(c => (
+                                                            <button 
+                                                              key={c} 
+                                                              onClick={() => handleSeatClick(`${rowNum}${c}`, 0, 0)} 
+                                                              className={`w-8 h-8 rounded-md flex flex-col items-center justify-center border-2 transition-all ${selectedSeats.some(s => s?.code === `${rowNum}${c}`) ? 'bg-brand-red border-brand-red text-white' : 'bg-white border-black/5 text-brand-black/40'}`}
+                                                            >
+                                                               <span className={`text-[8px] font-black ${selectedSeats.some(s => s?.code === `${rowNum}${c}`) ? 'text-white' : 'text-brand-black'}`}>{rowNum}{c}</span>
+                                                               <Armchair size={10} className={selectedSeats.some(s => s?.code === `${rowNum}${c}`) ? 'opacity-100' : 'opacity-40'} />
+                                                            </button>
+                                                         ))}
+                                                      </div>
+                                                      <div className="w-4 text-[8px] font-black text-brand-black/20 text-center">{rowNum}</div>
+                                                      <div className="flex gap-1.5">
+                                                         {['D','E','F'].map(c => (
+                                                            <button 
+                                                              key={c} 
+                                                              onClick={() => handleSeatClick(`${rowNum}${c}`, 0, 0)} 
+                                                              className={`w-8 h-8 rounded-md flex flex-col items-center justify-center border-2 transition-all ${selectedSeats.some(s => s?.code === `${rowNum}${c}`) ? 'bg-brand-red border-brand-red text-white' : 'bg-white border-black/5 text-brand-black/40'}`}
+                                                            >
+                                                               <span className={`text-[8px] font-black ${selectedSeats.some(s => s?.code === `${rowNum}${c}`) ? 'text-white' : 'text-brand-black'}`}>{rowNum}{c}</span>
+                                                               <Armchair size={10} className={selectedSeats.some(s => s?.code === `${rowNum}${c}`) ? 'opacity-100' : 'opacity-40'} />
+                                                            </button>
+                                                         ))}
+                                                      </div>
+                                                   </div>
+                                                ))
+                                             )}
                                          </div>
                                       </div>
                                    </div>

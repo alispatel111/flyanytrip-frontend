@@ -18,7 +18,7 @@ import FlightFilters from '../flights/FlightFilters';
 import FlightSortBar from '../flights/FlightSortBar';
 import { useSearchContext } from '../../context/SearchContext';
 import FlightDetailsTabs from '../flights/FlightDetailsTabs';
-import { FareUpdateModal, SoldOutModal, FlightFareModal } from '../flights/FlightModals';
+import { SoldOutModal, FlightFareModal } from '../flights/FlightModals';
 import api from '../../services/api';
 
 const AirlineLogo = ({ airlineCode, airlineName }) => {
@@ -269,7 +269,7 @@ const ResultCard = ({ r, isExpanded, onToggleExpand, onContinue, revalidating })
 );
 
 const ResultsSection = () => {
-  const { results, activeTab, searching, filters, setFilters, navigate, isFarePopupOpen, setIsFarePopupOpen } = useSearchContext();
+  const { from, to, departureDate, results, activeTab, searching, filters, setFilters, navigate, isFarePopupOpen, setIsFarePopupOpen } = useSearchContext();
   const showSkeletons = searching && activeTab === 'flights';
   const skeletonArray = Array(6).fill(0);
 
@@ -281,7 +281,6 @@ const ResultsSection = () => {
   const [expandedId, setExpandedId] = React.useState(null);
   const [revalidatingId, setRevalidatingId] = React.useState(null);
   
-  const [fareUpdateModal, setFareUpdateModal] = React.useState({ open: false, oldFare: 0, newFare: 0, flight: null });
   const [soldOutModal, setSoldOutModal] = React.useState(false);
   const [fareModal, setFareModal] = React.useState({ open: false, flight: null });
 
@@ -324,19 +323,36 @@ const ResultsSection = () => {
 
         const newFareObj = responseData?.Response?.Results?.Fare;
         const newFare = Math.ceil(newFareObj?.OfferedFare || newFareObj?.PublishedFare || 0);
-        const oldFare = parseInt(String(flight.price).replace(/,/g, ''), 10);
 
-        if (newFare !== oldFare && newFare > 0) {
-           setFareUpdateModal({
-              open: true,
-              oldFare: oldFare.toLocaleString('en-IN'),
-              newFare: newFare.toLocaleString('en-IN'),
-              flight: { ...flight, price: newFare.toLocaleString('en-IN'), rawQuote: responseData }
-           });
-        } else {
-           setIsFarePopupOpen(false);
-           navigate('/checkout', { state: { flight: { ...flight, rawQuote: responseData } } });
-        }
+        setIsFarePopupOpen(false);
+        const flightData = { ...flight, price: newFare > 0 ? newFare.toLocaleString('en-IN') : flight.price, rawQuote: responseData };
+        
+        // Minimize data for URL to avoid 431 error
+        const minimalFlightData = {
+           id: flight.id,
+           traceId: flight.traceId,
+           resultIndex: flight.resultIndex,
+           tokenId: flight.tokenId,
+           from: from.iata,
+           to: to.iata,
+           fromCity: from.city,
+           toCity: to.city,
+           fromAirport: from.name,
+           toAirport: to.name,
+           departureDate: departureDate instanceof Date ? departureDate.toISOString() : departureDate,
+           airline: flight.airline,
+           airlineCode: flight.airlineCode,
+           flightNo: flight.flightNo,
+           time: flight.time,
+           arrival: flight.arrival,
+           dur: flight.dur,
+           price: newFare > 0 ? newFare.toLocaleString('en-IN') : flight.price,
+           class: flight.class,
+           selectedFare: flight.selectedFare || 'SAVER'
+        };
+
+        const encodedData = btoa(encodeURIComponent(JSON.stringify(minimalFlightData)).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
+        navigate(`/checkout/${from.iata}-${to.iata}?data=${encodeURIComponent(encodedData)}`, { state: { flight: flightData } });
       } else {
         alert('Revalidation failed. Please try again.');
       }
@@ -348,12 +364,6 @@ const ResultsSection = () => {
     }
   };
 
-  const acceptFareUpdate = () => {
-     const { flight } = fareUpdateModal;
-     setFareUpdateModal({ open: false, oldFare: 0, newFare: 0, flight: null });
-     setIsFarePopupOpen(false);
-     navigate('/checkout', { state: { flight } });
-  };
 
   const displayResults = React.useMemo(() => {
     if (activeTab !== 'flights') return results;
@@ -540,14 +550,6 @@ const ResultsSection = () => {
         </motion.section>
       )}
 
-      <FareUpdateModal 
-        key="fare-update-modal"
-        isOpen={fareUpdateModal.open}
-        onClose={() => setFareUpdateModal({ open: false, oldFare: 0, newFare: 0, flight: null })}
-        onAccept={acceptFareUpdate}
-        oldFare={fareUpdateModal.oldFare}
-        newFare={fareUpdateModal.newFare}
-      />
       <SoldOutModal 
         key="sold-out-modal"
         isOpen={soldOutModal}
