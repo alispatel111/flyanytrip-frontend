@@ -45,6 +45,10 @@ export const useSearchState = () => {
     new Date(new Date().setDate(new Date().getDate() + 4))
   ]);
   const [tripType, setTripType] = useState('one');
+  const [multiCitySegments, setMultiCitySegments] = useState([
+    { from: { iata: 'DEL', name: 'Indira Gandhi International', city: 'New Delhi', country: 'India' }, to: { iata: 'BOM', name: 'Chhatrapati Shivaji Maharaj', city: 'Mumbai', country: 'India' }, departureDate: new Date(new Date().setDate(new Date().getDate() + 1)) },
+    { from: { iata: 'BOM', name: 'Chhatrapati Shivaji Maharaj', city: 'Mumbai', country: 'India' }, to: { iata: 'BLR', name: 'Kempegowda International', city: 'Bengaluru', country: 'India' }, departureDate: new Date(new Date().setDate(new Date().getDate() + 4)) }
+  ]);
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
   const [infants, setInfants] = useState(0);
@@ -233,9 +237,16 @@ export const useSearchState = () => {
 
     // Validate required fields depending on which tab is active
     if (activeTab === 'flights') {
-      if (!from || !to) isValid = false;
-      if (tripType === 'round' && (!dateRange[0] || !dateRange[1])) isValid = false;
-      if (tripType === 'one' && !departureDate) isValid = false;
+      if (tripType === 'multi') {
+        if (!multiCitySegments || multiCitySegments.length < 2) isValid = false;
+        multiCitySegments.forEach(seg => {
+          if (!seg.from || !seg.to || !seg.departureDate) isValid = false;
+        });
+      } else {
+        if (!from || !to) isValid = false;
+        if (tripType === 'round' && (!dateRange[0] || !dateRange[1])) isValid = false;
+        if (tripType === 'one' && !departureDate) isValid = false;
+      }
     } else if (activeTab === 'tours') {
       if (!tourDest) isValid = false;
     } else if (activeTab === 'visa') {
@@ -267,20 +278,41 @@ export const useSearchState = () => {
     if (activeTab === 'flights') {
       setFilters(initialFilters);
       const searchData = {
-        from,
-        to,
-        departureDate: departureDate instanceof Date ? departureDate.toISOString() : departureDate,
-        dateRange: dateRange.map(d => d instanceof Date ? d.toISOString() : d),
         tripType,
         adults,
         children,
         infants,
         travelClass,
-        filters: initialFilters // Use fresh filters in the new search URL
+        filters: initialFilters
       };
       
-      const encodedData = btoa(encodeURIComponent(JSON.stringify(searchData)).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
-      navigate(`/flights/${from.iata}-${to.iata}?data=${encodeURIComponent(encodedData)}`, { replace: true });
+      let redirectUrl = '';
+      
+      const toLocalISO = (d) => {
+        if (!(d instanceof Date)) return d;
+        const pad = n => n < 10 ? '0' + n : n;
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      };
+
+      if (tripType === 'multi') {
+        searchData.multiCitySegments = multiCitySegments.map(seg => ({
+          ...seg,
+          departureDate: toLocalISO(seg.departureDate)
+        }));
+        const encodedData = btoa(encodeURIComponent(JSON.stringify(searchData)).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
+        redirectUrl = `/flights/multi?data=${encodeURIComponent(encodedData)}`;
+      } else {
+        searchData.from = from;
+        searchData.to = to;
+        searchData.departureDate = toLocalISO(departureDate);
+        if (tripType === 'round') {
+          searchData.dateRange = dateRange.map(d => toLocalISO(d));
+        }
+        const encodedData = btoa(encodeURIComponent(JSON.stringify(searchData)).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
+        redirectUrl = `/flights/${from.iata}-${to.iata}?data=${encodeURIComponent(encodedData)}`;
+      }
+
+      navigate(redirectUrl, { replace: true });
       return;
     }
 
@@ -354,10 +386,6 @@ export const useSearchState = () => {
           const parsedData = JSON.parse(atob(dataParam));
           
           // Reconstruct state without triggering unnecessary re-renders
-          if (parsedData.from) setFrom(parsedData.from);
-          if (parsedData.to) setTo(parsedData.to);
-          if (parsedData.departureDate) setDepartureDate(new Date(parsedData.departureDate));
-          if (parsedData.dateRange) setDateRange([new Date(parsedData.dateRange[0]), new Date(parsedData.dateRange[1])]);
           if (parsedData.tripType) setTripType(parsedData.tripType);
           if (parsedData.adults !== undefined) setAdults(parsedData.adults);
           if (parsedData.children !== undefined) setChildren(parsedData.children);
@@ -365,16 +393,38 @@ export const useSearchState = () => {
           if (parsedData.travelClass) setTravelClass(parsedData.travelClass);
           if (parsedData.filters) setFilters(parsedData.filters);
           
+          if (parsedData.tripType === 'multi' && parsedData.multiCitySegments) {
+            setMultiCitySegments(parsedData.multiCitySegments.map(seg => ({
+              ...seg,
+              departureDate: new Date(seg.departureDate)
+            })));
+          } else {
+            if (parsedData.from) setFrom(parsedData.from);
+            if (parsedData.to) setTo(parsedData.to);
+            if (parsedData.departureDate) setDepartureDate(new Date(parsedData.departureDate));
+            if (parsedData.dateRange) setDateRange([new Date(parsedData.dateRange[0]), new Date(parsedData.dateRange[1])]);
+          }
+          
           // Create a "core" query string (excluding filters) to check if we need to re-fetch
-          const coreQuery = JSON.stringify({
-            from: parsedData.from.iata,
-            to: parsedData.to.iata,
-            date: parsedData.tripType === 'one' ? parsedData.departureDate : parsedData.dateRange[0],
-            ret: parsedData.tripType === 'round' ? parsedData.dateRange[1] : '',
-            pax: { a: parsedData.adults, c: parsedData.children, i: parsedData.infants },
-            class: parsedData.travelClass,
-            type: parsedData.tripType
-          });
+          let coreQuery = '';
+          if (parsedData.tripType === 'multi') {
+            coreQuery = JSON.stringify({
+              segments: parsedData.multiCitySegments.map(s => `${s.from.iata}-${s.to.iata}-${s.departureDate}`),
+              pax: { a: parsedData.adults, c: parsedData.children, i: parsedData.infants },
+              class: parsedData.travelClass,
+              type: parsedData.tripType
+            });
+          } else {
+            coreQuery = JSON.stringify({
+              from: parsedData.from.iata,
+              to: parsedData.to.iata,
+              date: parsedData.tripType === 'one' ? parsedData.departureDate : parsedData.dateRange[0],
+              ret: parsedData.tripType === 'round' ? parsedData.dateRange[1] : '',
+              pax: { a: parsedData.adults, c: parsedData.children, i: parsedData.infants },
+              class: parsedData.travelClass,
+              type: parsedData.tripType
+            });
+          }
 
           // Skip fetching if the core query hasn't changed (e.g. only filters changed)
           if (coreQuery === lastFetchedQueryRef.current && results.length > 0) {
@@ -391,19 +441,35 @@ export const useSearchState = () => {
             setSearchError('');
             
             try {
-              const response = await api.get('/api/flights/search', {
-                params: {
-                  origin: parsedData.from.iata,
-                  destination: parsedData.to.iata,
-                  departureDate: parsedData.tripType === 'one' ? parsedData.departureDate : parsedData.dateRange[0],
-                  returnDate: parsedData.tripType === 'round' ? parsedData.dateRange[1] : '',
+              let response;
+              if (parsedData.tripType === 'multi') {
+                response = await api.post('/api/flights/search/multicity', {
+                  segments: parsedData.multiCitySegments.map(seg => ({
+                    from: seg.from.iata,
+                    to: seg.to.iata,
+                    departureDate: seg.departureDate,
+                    travelClass: parsedData.travelClass
+                  })),
                   adults: parsedData.adults,
                   children: parsedData.children,
                   infants: parsedData.infants,
-                  cabinClass: parsedData.travelClass,
-                  tripType: parsedData.tripType
-                }
-              });
+                  cabinClass: parsedData.travelClass
+                });
+              } else {
+                response = await api.get('/api/flights/search', {
+                  params: {
+                    origin: parsedData.from.iata,
+                    destination: parsedData.to.iata,
+                    departureDate: parsedData.tripType === 'one' ? parsedData.departureDate : parsedData.dateRange[0],
+                    returnDate: parsedData.tripType === 'round' ? parsedData.dateRange[1] : '',
+                    adults: parsedData.adults,
+                    children: parsedData.children,
+                    infants: parsedData.infants,
+                    cabinClass: parsedData.travelClass,
+                    tripType: parsedData.tripType
+                  }
+                });
+              }
               
               if (response.data.success && response.data.data && response.data.data.flights) {
                 setResults(response.data.data.flights);
@@ -440,6 +506,7 @@ export const useSearchState = () => {
     departureDate, setDepartureDate,
     dateRange, setDateRange,
     tripType, setTripType,
+    multiCitySegments, setMultiCitySegments,
     adults, setAdults,
     children, setChildren,
     infants, setInfants,
