@@ -16,6 +16,7 @@ import TravellerDetails from '../pages/TravellerDetails';
 import SeatSelection from '../pages/SeatSelection';
 import Addons from '../pages/Addons';
 import CheckoutPage from '../pages/CheckoutPage';
+import PreConfirmationPage from '../pages/PreConfirmationPage';
 import FinalBookingReview from '../pages/FinalBookingReview';
 import Payment from '../pages/Payment';
 import BookingSuccess from '../pages/BookingSuccess';
@@ -72,6 +73,7 @@ const AppRoutes = () => {
       <Route path="/addons" element={<Addons />} />
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/checkout/:route" element={<CheckoutPage />} />
+      <Route path="/pre-confirmation" element={<PreConfirmationPage />} />
       <Route path="/payment" element={<Payment />} />
       <Route path="/booking-success" element={<BookingSuccess />} />
       <Route path="/booking-failed" element={<BookingFailed />} />

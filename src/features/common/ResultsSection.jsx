@@ -21,7 +21,7 @@ import FlightDetailsTabs from '../flights/FlightDetailsTabs';
 import { SoldOutModal, FlightFareModal } from '../flights/FlightModals';
 import api from '../../services/api';
 
-const AirlineLogo = ({ airlineCode, airlineName }) => {
+const AirlineLogo = React.memo(({ airlineCode, airlineName }) => {
   const [hasError, setHasError] = React.useState(false);
   const [useFallback, setUseFallback] = React.useState(false);
 
@@ -54,7 +54,7 @@ const AirlineLogo = ({ airlineCode, airlineName }) => {
       />
     </div>
   );
-};
+});
 
 const FlightSkeleton = () => (
   <div className="bg-white rounded-3xl border border-black/5 shadow-sm overflow-hidden transition-all">
@@ -100,7 +100,7 @@ const FlightSkeleton = () => (
   </div>
 );
 
-const ResultCard = ({ r, isExpanded, onToggleExpand, onContinue, revalidating }) => (
+const ResultCard = React.memo(({ r, isExpanded, onToggleExpand, onContinue, revalidating }) => (
   <div className={`bg-white rounded-3xl border transition-all ${isExpanded ? 'border-brand-red/30 shadow-2xl ring-4 ring-brand-red/5' : 'border-black/5 shadow-sm hover:shadow-xl hover:border-brand-red/20'} overflow-hidden group`}>
     {r.type === 'flight' && (
       <div className="flex flex-col h-full">
@@ -266,7 +266,12 @@ const ResultCard = ({ r, isExpanded, onToggleExpand, onContinue, revalidating })
       </div>
     )}
   </div>
-);
+), (prevProps, nextProps) => {
+  return prevProps.revalidating === nextProps.revalidating &&
+         prevProps.isExpanded === nextProps.isExpanded &&
+         prevProps.r.id === nextProps.r.id &&
+         prevProps.r.price === nextProps.r.price;
+});
 
 const ResultsSection = () => {
   const { from, to, departureDate, results, activeTab, searching, filters, setFilters, navigate, isFarePopupOpen, setIsFarePopupOpen } = useSearchContext();
@@ -296,12 +301,12 @@ const ResultsSection = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const toggleExpand = (flight) => {
+  const toggleExpand = React.useCallback((flight) => {
     setFareModal({ open: true, flight });
     setIsFarePopupOpen(true);
-  };
+  }, [setIsFarePopupOpen]);
 
-  const handleContinue = async (flight) => {
+  const handleContinue = React.useCallback(async (flight) => {
     setRevalidatingId(flight.id);
     try {
       const response = await api.post('/api/flights/fare-quote', {
@@ -362,7 +367,7 @@ const ResultsSection = () => {
     } finally {
       setRevalidatingId(null);
     }
-  };
+  }, [from, to, departureDate, navigate, setIsFarePopupOpen]);
 
 
   const displayResults = React.useMemo(() => {
@@ -506,7 +511,7 @@ const ResultsSection = () => {
                     ) : displayResults.length > 0 ? (
                       displayResults.map((r, idx) => (
                         <motion.div
-                          key={`flight-card-${idx}-${r.id || 'no-id'}`}
+                          key={`flight-card-${r.id || idx}`}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.03 }}

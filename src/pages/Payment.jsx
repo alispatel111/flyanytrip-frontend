@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { flight, grandTotal, travellers, ssrTotal } = location.state || {};
+  const { flight, grandTotal, travellers, ssrTotal = 0 } = location.state || {};
   
   const [method, setMethod] = useState('card');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -36,7 +36,9 @@ const Payment = () => {
           FirstName: t.firstName, 
           LastName: t.lastName,
           email: travellers[0].email,
-          phone: travellers[0].phone
+          phone: travellers[0].phone,
+          passportNumber: t.passportNumber || null,
+          passportExpiry: t.passportExpiry || null
         }))
       };
 

@@ -157,10 +157,10 @@ export const FlightFareModal = ({ isOpen, onClose, flight, onContinue, revalidat
       price: displayPrice,
       color: '#448AFF',
       benefits: [
-        { icon: <Luggage size={14} />, text: liveData.loading ? 'Fetching baggage...' : `${cabinBaggage} Cabin Baggage` },
-        { icon: <Luggage size={14} />, text: liveData.loading ? 'Fetching baggage...' : `${checkInBaggage} Check-in Baggage` },
-        { icon: <Info size={14} />, text: liveData.loading ? 'Updating rules...' : `Cancellation fee starts at ${cancelFee}` },
-        { icon: <Info size={14} />, text: liveData.loading ? 'Updating rules...' : `Date Change fee starts at ${changeFee}` },
+        { icon: <Luggage size={14} />, text: `${cabinBaggage} Cabin Baggage` },
+        { icon: <Luggage size={14} />, text: `${checkInBaggage} Check-in Baggage` },
+        { icon: <Info size={14} />, text: `Cancellation fee starts at ${cancelFee}` },
+        { icon: <Info size={14} />, text: `Date Change fee starts at ${changeFee}` },
         { icon: <Armchair size={14} />, text: 'Chargeable Seats' },
         { icon: <Coffee size={14} />, text: 'Chargeable Meals' },
       ]
@@ -171,8 +171,8 @@ export const FlightFareModal = ({ isOpen, onClose, flight, onContinue, revalidat
       color: '#E61E2D',
       isSpecial: true,
       benefits: [
-        { icon: <Luggage size={14} />, text: liveData.loading ? '...' : `${cabinBaggage} Cabin Baggage` },
-        { icon: <Luggage size={14} />, text: liveData.loading ? '...' : `${checkInBaggage} Check-in Baggage` },
+        { icon: <Luggage size={14} />, text: `${cabinBaggage} Cabin Baggage` },
+        { icon: <Luggage size={14} />, text: `${checkInBaggage} Check-in Baggage` },
         { icon: <Zap size={14} />, text: 'Exclusive Discount Applied' },
         { icon: <ShieldAlert size={14} />, text: 'Trip Secure Included' },
         { icon: <Armchair size={14} />, text: 'Chargeable Seats' },
@@ -184,8 +184,8 @@ export const FlightFareModal = ({ isOpen, onClose, flight, onContinue, revalidat
       price: displayPrice,
       color: '#00B894',
       benefits: [
-        { icon: <Luggage size={14} />, text: liveData.loading ? '...' : `${cabinBaggage} Cabin Baggage` },
-        { icon: <Luggage size={14} />, text: liveData.loading ? '...' : `${checkInBaggage} Check-in Baggage` },
+        { icon: <Luggage size={14} />, text: `${cabinBaggage} Cabin Baggage` },
+        { icon: <Luggage size={14} />, text: `${checkInBaggage} Check-in Baggage` },
         { icon: <Info size={14} />, text: 'Lower Cancellation fee' },
         { icon: <Info size={14} />, text: 'Lower Date Change fee' },
         { icon: <Armchair size={14} />, text: 'Free Seats Included' },
@@ -264,14 +264,35 @@ export const FlightFareModal = ({ isOpen, onClose, flight, onContinue, revalidat
                      </div>
 
                      <div className="p-5 flex-1 space-y-4">
-                        {option.benefits.map((benefit, bIdx) => (
-                           <div key={bIdx} className="flex items-start gap-3">
-                              <div className="mt-0.5 text-green-500">
-                                 {benefit.icon}
-                              </div>
-                              <span className="text-[11px] font-medium text-brand-black/70 leading-tight">{benefit.text}</span>
+                        {liveData.loading ? (
+                           <div className="space-y-4 animate-pulse">
+                              {[1, 2, 3, 4, 5, 6].map((i) => (
+                                 <div key={i} className="flex items-center gap-3">
+                                    <div className="w-5 h-5 bg-black/5 rounded-full flex items-center justify-center shrink-0">
+                                       <div className="w-3.5 h-3.5 bg-black/10 rounded-full" />
+                                    </div>
+                                    <div className="space-y-1.5 flex-1">
+                                       <div className={`h-2.5 bg-black/10 rounded shrink-0 ${
+                                          i === 1 ? 'w-2/3' : 
+                                          i === 2 ? 'w-3/4' : 
+                                          i === 3 ? 'w-5/6' : 
+                                          i === 4 ? 'w-1/2' : 
+                                          i === 5 ? 'w-2/3' : 'w-3/5'
+                                       }`} />
+                                    </div>
+                                 </div>
+                              ))}
                            </div>
-                        ))}
+                        ) : (
+                           option.benefits.map((benefit, bIdx) => (
+                              <div key={bIdx} className="flex items-start gap-3">
+                                 <div className="mt-0.5 text-green-500 shrink-0">
+                                    {benefit.icon}
+                                 </div>
+                                 <span className="text-[11px] font-medium text-brand-black/70 leading-tight">{benefit.text}</span>
+                              </div>
+                           ))
+                        )}
                      </div>
 
                      <div className="p-4 bg-black/[0.02]">

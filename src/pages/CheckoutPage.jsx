@@ -47,23 +47,27 @@ const CheckoutPage = () => {
   const [error, setError] = useState(null);
 
   // Form State
-  const [travellers, setTravellers] = useState([
-    { type: 'adult', title: 'Mr', firstName: '', lastName: '', gender: 'Male', dob: '', email: '', phone: '' }
+  const [travellers, setTravellers] = useState(location.state?.travellers || [
+    { type: 'adult', title: 'Mr', firstName: '', lastName: '', gender: 'Male', dob: '', email: '', phone: '', passportNumber: '', passportExpiry: '' }
   ]);
-  const [selectedSeats, setSelectedSeats] = useState([]);
-  const [selectedMeals, setSelectedMeals] = useState([]);
-  const [selectedBaggage, setSelectedBaggage] = useState([]);
-  const [couponCode, setCouponCode] = useState('');
-  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [selectedSeats, setSelectedSeats] = useState(location.state?.selectedSeats || []);
+  const [selectedMeals, setSelectedMeals] = useState(location.state?.selectedMeals || []);
+  const [selectedBaggage, setSelectedBaggage] = useState(location.state?.selectedBaggage || []);
+  const [couponCode, setCouponCode] = useState(location.state?.couponCode || '');
+  const [couponDiscount, setCouponDiscount] = useState(location.state?.couponDiscount || 0);
   const [couponError, setCouponError] = useState('');
-  const [agreed, setAgreed] = useState(false);
-  const [showGST, setShowGST] = useState(false);
-  const [gstData, setGstData] = useState({ companyName: '', registrationNo: '' });
-  const [selectedState, setSelectedState] = useState('Gujarat');
+  const [agreed, setAgreed] = useState(location.state?.agreed || false);
+  const [showGST, setShowGST] = useState(location.state?.showGST || false);
+  const [gstData, setGstData] = useState(location.state?.gstData || { companyName: '', registrationNo: '' });
+  const [selectedState, setSelectedState] = useState(location.state?.selectedState || 'Gujarat');
 
   // UI State
-  const [activeSection, setActiveSection] = useState('flight'); // 'flight', 'travellers', 'seats', 'addons'
-  const [unlockedSections, setUnlockedSections] = useState(['flight', 'travellers']);
+  const [activeSection, setActiveSection] = useState(location.state?.editSection || 'flight'); // 'flight', 'travellers', 'seats', 'addons'
+  const [unlockedSections, setUnlockedSections] = useState(
+    location.state?.selectedSeats?.length > 0 || location.state?.selectedMeals?.length > 0 || location.state?.selectedBaggage?.length > 0 || location.state?.editSection
+      ? ['flight', 'travellers', 'seats', 'addons']
+      : ['flight', 'travellers']
+  );
   const [errors, setErrors] = useState({});
   const travellerSectionRef = useRef(null);
   const seatSectionRef = useRef(null);
@@ -134,6 +138,34 @@ const CheckoutPage = () => {
     fetchAllData();
   }, [initialFlight, navigate]);
 
+  useEffect(() => {
+    if (location.state?.editSection) {
+      const section = location.state.editSection;
+      if (section === 'travellers') {
+        setActiveSection('travellers');
+        setTimeout(() => {
+          travellerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      } else if (section === 'seats') {
+        if (!unlockedSections.includes('seats')) {
+          setUnlockedSections(prev => [...new Set([...prev, 'seats', 'addons'])]);
+        }
+        setActiveSection('seats');
+        setTimeout(() => {
+          seatSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      } else if (section === 'addons') {
+        if (!unlockedSections.includes('seats')) {
+          setUnlockedSections(prev => [...new Set([...prev, 'seats', 'addons'])]);
+        }
+        setActiveSection('addons');
+        setTimeout(() => {
+          seatSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    }
+  }, [location.state?.editSection]);
+
   if (!initialFlight) return null;
 
   // Price Calculations
@@ -152,6 +184,7 @@ const CheckoutPage = () => {
   const dynamicFlight = {
     ...flight,
     segments: apiSegments,
+    departureDate: firstSegment ? firstSegment.Origin.DepTime : (flight.departureDate || flight.date),
     time: firstSegment ? new Date(firstSegment.Origin.DepTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : flight.time,
     arrival: lastSegment ? new Date(lastSegment.Destination.ArrTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : flight.arrival,
     airline: firstSegment?.Airline?.AirlineName || flight.airline,
@@ -168,6 +201,27 @@ const CheckoutPage = () => {
   const ssrTotal = ssrSeatTotal + ssrMealTotal + ssrBaggageTotal;
 
   const grandTotal = baseFare + tax + otherCharges + ssrTotal + convenienceFee - couponDiscount;
+
+  // Check if flight is international (non-Indian routes)
+  const checkIfInternational = () => {
+    if (flight?.isInternational || flight?.IsInternational) return true;
+    if (flight?.isDomestic === false) return true;
+    if (fareQuote?.Segments?.[0]) {
+      const segments = fareQuote.Segments[0];
+      const hasIntl = segments.some(seg => {
+        const originCountry = seg.Origin?.Airport?.CountryCode || seg.Origin?.Airport?.CountryName;
+        const destCountry = seg.Destination?.Airport?.CountryCode || seg.Destination?.Airport?.CountryName;
+        
+        if (originCountry && !['IN', 'India', 'INDIA'].includes(originCountry)) return true;
+        if (destCountry && !['IN', 'India', 'INDIA'].includes(destCountry)) return true;
+        return false;
+      });
+      if (hasIntl) return true;
+    }
+    return false;
+  };
+  
+  const isInternational = checkIfInternational();
 
   const handleApplyCoupon = async () => {
     setCouponError('');
@@ -187,7 +241,7 @@ const CheckoutPage = () => {
   };
 
   const handleAddTraveller = () => {
-    setTravellers([...travellers, { type: 'adult', title: 'Mr', firstName: '', lastName: '', gender: 'Male', dob: '' }]);
+    setTravellers([...travellers, { type: 'adult', title: 'Mr', firstName: '', lastName: '', gender: 'Male', dob: '', passportNumber: '', passportExpiry: '' }]);
   };
 
   const handleInputChange = (index, field, value) => {
@@ -202,6 +256,17 @@ const CheckoutPage = () => {
     travellers.forEach((t, idx) => {
       if (!t.firstName.trim()) newErrors[`traveller_${idx}_firstName`] = "First name is required";
       if (!t.lastName.trim()) newErrors[`traveller_${idx}_lastName`] = "Last name is required";
+      
+      // Dynamic Passport validation: Compulsory if International, Optional if Domestic
+      if (isInternational) {
+        if (!t.passportNumber || !t.passportNumber.trim()) {
+          newErrors[`traveller_${idx}_passportNumber`] = "Passport number is required for international flights";
+        }
+        if (!t.passportExpiry || !t.passportExpiry.trim()) {
+          newErrors[`traveller_${idx}_passportExpiry`] = "Passport expiry date is required for international flights";
+        }
+      }
+
       if (idx === 0) {
         if (!t.email.trim()) newErrors[`contact_email`] = "Email is required";
         else if (!/\S+@\S+\.\S+/.test(t.email)) newErrors[`contact_email`] = "Invalid email format";
@@ -244,27 +309,36 @@ const CheckoutPage = () => {
        return;
     }
 
-    // Final Validation
-    const isTravellersValid = travellers.every((t, idx) => t.firstName && t.lastName && (idx === 0 ? (t.email && t.phone) : true));
-    if (!isTravellersValid) {
-       alert("Please complete all traveller details");
-       travellerSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Final Validation using reusable function
+    if (!validateTravellers()) {
+       alert("Please complete all traveller details correctly");
+       travellerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
        return;
     }
 
-    // TEST MODE: Navigate to dynamic Mock Payment page
     setLoading(true);
     setTimeout(() => {
        setLoading(false);
-       navigate('/payment', { 
+       navigate('/pre-confirmation', { 
           state: { 
              flight: dynamicFlight,
              grandTotal,
              ssrTotal,
-             travellers
+             travellers,
+             selectedSeats,
+             selectedMeals,
+             selectedBaggage,
+             couponCode,
+             couponDiscount,
+             showGST,
+             gstData,
+             selectedState,
+             baseFare,
+             tax,
+             convenienceFee
           } 
        });
-    }, 1000);
+    }, 600);
   };
 
   const initiateRazorpay = (order) => {
@@ -289,8 +363,10 @@ const CheckoutPage = () => {
                 FirstName: t.firstName,
                 LastName: t.lastName,
                 PaxType: t.type === 'adult' ? 1 : (t.type === 'child' ? 2 : 3),
-                DateOfBirth: t.dob,
+                DateOfBirth: t.dob || "1990-01-01",
                 Gender: t.gender === 'Male' ? 1 : 2,
+                PassportNo: t.passportNumber || null,
+                PassportExpiry: t.passportExpiry || null
               })),
               contactDetails: { Email: travellers[0].email, ContactNo: travellers[0].phone },
               paymentData: response,
@@ -749,7 +825,36 @@ const CheckoutPage = () => {
                                  </div>
                               </div>
 
-                              <div className="flex items-center gap-2">
+                              {/* Passport details row */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                 <div>
+                                    <label className="block text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-1.5">
+                                       Passport Number {isInternational ? <span className="text-brand-red">*</span> : <span className="text-black/30 font-medium">(Optional)</span>}
+                                    </label>
+                                    <input 
+                                      type="text" 
+                                      value={traveller.passportNumber} 
+                                      onChange={(e) => handleInputChange(index, 'passportNumber', e.target.value)} 
+                                      placeholder="Passport Number" 
+                                      className={`w-full bg-white border ${errors[`traveller_${index}_passportNumber`] ? 'border-brand-red' : 'border-black/10'} rounded-lg py-2.5 px-3 text-sm font-bold focus:border-brand-red outline-none uppercase`} 
+                                    />
+                                    {errors[`traveller_${index}_passportNumber`] && <p className="text-[9px] text-brand-red font-bold mt-1">{errors[`traveller_${index}_passportNumber`]}</p>}
+                                 </div>
+                                 <div>
+                                    <label className="block text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-1.5">
+                                       Passport Expiry Date {isInternational ? <span className="text-brand-red">*</span> : <span className="text-black/30 font-medium">(Optional)</span>}
+                                    </label>
+                                    <input 
+                                      type="date" 
+                                      value={traveller.passportExpiry} 
+                                      onChange={(e) => handleInputChange(index, 'passportExpiry', e.target.value)} 
+                                      className={`w-full bg-white border ${errors[`traveller_${index}_passportExpiry`] ? 'border-brand-red' : 'border-black/10'} rounded-lg py-2.5 px-3 text-sm font-bold focus:border-brand-red outline-none`} 
+                                    />
+                                    {errors[`traveller_${index}_passportExpiry`] && <p className="text-[9px] text-brand-red font-bold mt-1">{errors[`traveller_${index}_passportExpiry`]}</p>}
+                                 </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-2">
                                  <input type="checkbox" className="w-4 h-4 rounded text-brand-red" />
                                  <span className="text-[11px] font-bold text-brand-black/60">I require wheelchair <span className="text-black/30 font-medium">(Optional)</span></span>
                               </div>

@@ -242,7 +242,9 @@ const BookingSuccess = () => {
                                 </div>
                                 <div>
                                    <div className="text-sm font-black text-brand-black leading-tight">{p.Title} {p.FirstName} {p.LastName}</div>
-                                   <div className="text-[9px] font-bold text-brand-black/30 uppercase tracking-widest mt-1">Adult • Confirmed</div>
+                                   <div className="text-[9px] font-bold text-brand-black/30 uppercase tracking-widest mt-1">
+                                      Adult • Confirmed {p.passportNumber && `• Passport: ${p.passportNumber}`}
+                                   </div>
                                 </div>
                              </div>
                              <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center">
