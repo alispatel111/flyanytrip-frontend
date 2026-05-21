@@ -7,6 +7,7 @@ import {
   Edit3, ShieldAlert, Check, X, ShieldAlert as AlertIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { popularAirports } from '../utils/airportsData';
 
 const PreConfirmationPage = () => {
   const navigate = useNavigate();
@@ -61,7 +62,37 @@ const PreConfirmationPage = () => {
 
   // Segment references
   const segments = flight.segments || [];
-  const isInternational = flight.isInternational || flight.IsInternational || false;
+  // Helper to find country of an airport
+  const getAirportCountry = (iataCode) => {
+    if (!iataCode) return '';
+    const airport = popularAirports.find(a => a.iata?.toUpperCase() === iataCode.toUpperCase());
+    return airport ? airport.country : '';
+  };
+
+  const isInternational = (() => {
+    // 1. Check if any segment in segments crosses countries
+    if (segments.length > 0) {
+      const hasIntlSegment = segments.some(seg => {
+        const originCountry = seg.Origin?.Airport?.CountryCode || seg.Origin?.Airport?.CountryName || getAirportCountry(seg.Origin?.Airport?.AirportCode);
+        const destCountry = seg.Destination?.Airport?.CountryCode || seg.Destination?.Airport?.CountryName || getAirportCountry(seg.Destination?.Airport?.AirportCode);
+        if (originCountry && destCountry) {
+          return originCountry.trim().toUpperCase() !== destCountry.trim().toUpperCase();
+        }
+        return false;
+      });
+      if (hasIntlSegment) return true;
+    }
+
+    // 2. Simple comparison of flight origin/destination countries
+    const originCountry = flight?.fromCountry || getAirportCountry(flight?.from);
+    const destCountry = flight?.toCountry || getAirportCountry(flight?.to);
+    if (originCountry && destCountry) {
+      return originCountry.trim().toUpperCase() !== destCountry.trim().toUpperCase();
+    }
+
+    // 3. Fallback to existing flag
+    return flight.isInternational || flight.IsInternational || false;
+  })();
 
   // Passenger counts breakdown
   const adults = travellers.filter(t => t.type === 'adult').length;
@@ -362,21 +393,32 @@ const PreConfirmationPage = () => {
                     >
                        {selectedSeats.length > 0 ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                             {selectedSeats.map((s, idx) => {
-                                const travelerObj = travellers[s.paxIdx || 0] || travellers[0] || {};
-                                const sType = getSeatType(s.code);
-                                const extraLeg = isExtraLegroom(s.code, s.price);
-                                return (
-                                   <div key={idx} className="bg-black/[0.01] border border-black/5 rounded-2xl p-4 flex items-center justify-between gap-3">
-                                      <div className="flex items-center gap-3">
-                                         <div className="w-8 h-8 rounded-lg bg-[#E61E2A]/5 text-brand-red flex items-center justify-center">
-                                            <Armchair size={16} />
-                                         </div>
-                                         <div>
-                                            <div className="text-xs font-black text-brand-black">{s.code}</div>
-                                            <div className="text-[9px] font-bold text-brand-black/30 truncate max-w-[120px]">{travelerObj.firstName || 'Passenger'} {travelerObj.lastName || ''}</div>
-                                         </div>
-                                      </div>
+                                                           {selectedSeats.map((s, idx) => {
+                                 const travelerObj = travellers[s.paxIdx || 0] || travellers[0] || {};
+                                 const sType = getSeatType(s.code);
+                                 const extraLeg = isExtraLegroom(s.code, s.price);
+                                 const seg = segments[s.segmentIdx || 0];
+                                 const routeText = seg ? `${seg.Origin.Airport.AirportCode} → ${seg.Destination.Airport.AirportCode}` : '';
+                                 return (
+                                    <div key={idx} className="bg-black/[0.01] border border-black/5 rounded-2xl p-4 flex items-center justify-between gap-3">
+                                       <div className="flex items-center gap-3">
+                                          <div className="w-8 h-8 rounded-lg bg-[#E61E2A]/5 text-brand-red flex items-center justify-center">
+                                             <Armchair size={16} />
+                                          </div>
+                                          <div>
+                                             <div className="text-xs font-black text-brand-black flex items-center gap-1.5">
+                                                {s.code}
+                                                {routeText && (
+                                                   <span className="text-[8px] font-black text-[#008CFF] bg-[#008CFF]/5 px-1 py-0.5 rounded tracking-wide uppercase">
+                                                      {routeText}
+                                                   </span>
+                                                )}
+                                             </div>
+                                             <div className="text-[9px] font-bold text-brand-black/30 truncate max-w-[120px]">
+                                                {travelerObj.firstName || 'Passenger'} {travelerObj.lastName || ''}
+                                             </div>
+                                          </div>
+                                       </div>
                                       
                                       <div className="text-right">
                                          <span className="text-[9px] font-black text-brand-black/50 bg-black/5 px-2 py-0.5 rounded uppercase tracking-wider block mb-1">

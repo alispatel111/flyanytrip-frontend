@@ -12,7 +12,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, Search, ArrowRightLeft, ChevronDown } from 'lucide-react';
+import { Plane, Search, ArrowRightLeft, ChevronDown, X } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -47,18 +47,19 @@ import 'react-datepicker/dist/react-datepicker.css';
  * @param swapAirports       - Swaps the FROM and TO airports
  */
 
-const FlightSearch = ({
-  tripType, setTripType, from, setFrom, to, setTo,
-  departureDate, setDepartureDate, dateRange, setDateRange,
-  multiCitySegments = [], setMultiCitySegments,
-  adults, setAdults, children, setChildren, infants, setInfants,
-  travelClass, setTravelClass, searching, handleSearch,
-  showFromMenu, setShowFromMenu, showToMenu, setShowToMenu,
-  showTravelersMenu, setShowTravelersMenu, filteredAirports,
-  handleAirportSearch, selectAirport, swapAirports,
-  calendarFares = [], fetchingFares = false, fetchCalendarFares,
-  isCompact = false
-}) => {
+const FlightSearch = (props) => {
+  const {
+    tripType, setTripType, from, setFrom, to, setTo,
+    departureDate, setDepartureDate, dateRange, setDateRange,
+    multiCitySegments = [], setMultiCitySegments,
+    adults, setAdults, children, setChildren, infants, setInfants,
+    travelClass, setTravelClass, searching, handleSearch,
+    showFromMenu, setShowFromMenu, showToMenu, setShowToMenu,
+    showTravelersMenu, setShowTravelersMenu, filteredAirports,
+    handleAirportSearch, selectAirport, swapAirports,
+    calendarFares = [], fetchingFares = false, fetchCalendarFares,
+    isCompact = false
+  } = props;
   // Destructure the date range array into named start and end dates
   const [startDate, endDate] = dateRange;
   const [activeMultiMenu, setActiveMultiMenu] = React.useState(null);
@@ -77,6 +78,17 @@ const FlightSearch = ({
       month: 'short',
       year: '2-digit'
     }).format(date);
+  };
+
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+
+  const formatDateMultiCity = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const day = d.getDate();
+    const month = d.toLocaleString('en-US', { month: 'short' });
+    const year = d.getFullYear().toString().slice(-2);
+    return `${day} ${month}, ${year}`;
   };
 
   /**
@@ -120,318 +132,427 @@ const FlightSearch = ({
   if (isCompact) {
     return (
       <div ref={containerRef} className="w-full">
-        <div className="flex flex-wrap lg:flex-nowrap items-center gap-2">
-          {/* Trip Type Selector */}
-          <div className="relative group/compact min-w-[140px]">
-            <div
-              onClick={() => setTripType(tripType === 'one' ? 'round' : 'one')}
-              className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
-            >
-              <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">TRIP TYPE</div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-black text-brand-black">{tripType === 'one' ? 'One Way' : 'Round Trip'}</span>
-                <ChevronDown size={14} className="text-brand-black/30" />
+        {tripType === 'multi' ? (
+          <div className="flex flex-wrap lg:flex-nowrap items-center gap-2">
+            {/* Trip Type Selector */}
+            <div className="relative group/compact min-w-[140px]" onClick={() => setIsEditModalOpen(true)}>
+              <div className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all">
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">TRIP TYPE</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-black text-brand-black">Multi City</span>
+                  <ChevronDown size={14} className="text-brand-black/30" />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* FROM Box */}
-          <div className="relative flex-1 min-w-[200px]">
-            <div
-              onClick={() => {
-                setShowFromMenu(!showFromMenu); setShowToMenu(false); setShowTravelersMenu(false);
-                departureRef.current?.setOpen(false); returnRef.current?.setOpen(false);
-                mainDepartureRef.current?.setOpen(false); mainRangeRef.current?.setOpen(false);
-              }}
-              className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
-            >
-              <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">FROM</div>
-              <div className="text-sm font-black text-brand-black truncate">{from.city}, {from.country}</div>
+            {/* FROM Box */}
+            <div className="relative flex-1 min-w-[200px]" onClick={() => setIsEditModalOpen(true)}>
+              <div className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all">
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">FROM</div>
+                <div className="text-sm font-black text-brand-black truncate">
+                  {multiCitySegments[0]?.from?.city || from.city}, {multiCitySegments[0]?.from?.country || from.country}
+                </div>
+              </div>
             </div>
-            <AnimatePresence>
-              {showFromMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}
-                  className="absolute top-full left-0 mt-2 w-[400px] bg-white rounded-2xl shadow-2xl border border-black/8 z-[200] overflow-hidden"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="p-3 border-b border-black/5">
-                    <div className="flex items-center gap-2 bg-black/[0.03] rounded-xl px-3 py-2">
-                      <Search size={14} className="text-brand-black/30 shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="Search city or airport..."
-                        autoFocus
-                        className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-brand-black/30 text-brand-black"
-                        onChange={(e) => handleAirportSearch(e.target.value)}
-                      />
-                    </div>
+
+            {/* TO Box */}
+            <div className="relative flex-1 min-w-[200px]" onClick={() => setIsEditModalOpen(true)}>
+              <div className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all">
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">TO</div>
+                <div className="text-sm font-black text-brand-black truncate">
+                  {multiCitySegments[multiCitySegments.length - 1]?.to?.city || to.city}, {multiCitySegments[multiCitySegments.length - 1]?.to?.country || to.country}
+                </div>
+              </div>
+            </div>
+
+            {/* VIA Box */}
+            {multiCitySegments.length > 1 && (
+              <div 
+                className="relative flex-[1.5] min-w-[180px]" 
+                onClick={() => setIsEditModalOpen(true)}
+                title={multiCitySegments.slice(0, -1).map(seg => seg.to?.city).join(' → ')}
+              >
+                <div className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all">
+                  <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">VIA</div>
+                  <div className="text-sm font-black text-brand-black truncate max-w-[150px] lg:max-w-[250px]">
+                    {multiCitySegments.slice(0, -1).map(seg => seg.to?.city).join(' → ')}
                   </div>
-                  <div className="max-h-80 overflow-y-auto pb-2">
-                    {filteredAirports.map((a, idx) => (
-                      <div key={`${a.iata}-${idx}`} className="mx-2 mb-0.5 p-3 flex items-center gap-3 hover:bg-brand-red/[0.05] cursor-pointer transition-all rounded-xl" onMouseDown={(e) => { e.preventDefault(); selectAirport('from', a); }}>
-                        <div className="w-10 h-8 bg-black/[0.04] rounded-lg flex items-center justify-center shrink-0">
-                          <span className="text-[10px] font-black text-brand-black/60 tracking-wider">{a.iata}</span>
+                </div>
+              </div>
+            )}
+
+            {/* DEPART & RETURN Box */}
+            <div className="relative min-w-[200px]" onClick={() => setIsEditModalOpen(true)}>
+              <div className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all flex flex-col justify-center">
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">DEPART & RETURN</div>
+                <div className="text-sm font-black text-brand-black">
+                  {(() => {
+                    const firstDate = formatDateMultiCity(multiCitySegments[0]?.departureDate);
+                    const lastDate = formatDateMultiCity(multiCitySegments[multiCitySegments.length - 1]?.departureDate);
+                    return firstDate === lastDate ? firstDate : `${firstDate} – ${lastDate}`;
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* PASSENGER Box */}
+            <div className="relative min-w-[200px]" onClick={() => setIsEditModalOpen(true)}>
+              <div className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all">
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">PASSENGER & CLASS</div>
+                <div className="text-sm font-black text-brand-black truncate">
+                  {adults + children + infants} Traveler{adults + children + infants > 1 ? 's' : ''}, {travelClass}
+                </div>
+              </div>
+            </div>
+
+            {/* SEARCH Button */}
+            <button
+              onClick={handleSearch}
+              disabled={searching}
+              className="flex-1 min-w-[120px] h-[52px] bg-gradient-to-r from-[#82B1FF] to-[#448AFF] text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {searching ? '...' : 'SEARCH'}
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap lg:flex-nowrap items-center gap-2">
+            {/* Trip Type Selector */}
+            <div className="relative group/compact min-w-[140px]">
+              <div
+                onClick={() => setTripType(tripType === 'one' ? 'round' : 'one')}
+                className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
+              >
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">TRIP TYPE</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-black text-brand-black">{tripType === 'one' ? 'One Way' : 'Round Trip'}</span>
+                  <ChevronDown size={14} className="text-brand-black/30" />
+                </div>
+              </div>
+            </div>
+
+            {/* FROM Box */}
+            <div className="relative flex-1 min-w-[200px]">
+              <div
+                onClick={() => {
+                  setShowFromMenu(!showFromMenu); setShowToMenu(false); setShowTravelersMenu(false);
+                  departureRef.current?.setOpen(false); returnRef.current?.setOpen(false);
+                  mainDepartureRef.current?.setOpen(false); mainRangeRef.current?.setOpen(false);
+                }}
+                className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
+              >
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">FROM</div>
+                <div className="text-sm font-black text-brand-black truncate">{from.city}, {from.country}</div>
+              </div>
+              <AnimatePresence>
+                {showFromMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}
+                    className="absolute top-full left-0 mt-2 w-[400px] bg-white rounded-2xl shadow-2xl border border-black/8 z-[200] overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-3 border-b border-black/5">
+                      <div className="flex items-center gap-2 bg-black/[0.03] rounded-xl px-3 py-2">
+                        <Search size={14} className="text-brand-black/30 shrink-0" />
+                        <input
+                          type="text"
+                          placeholder="Search city or airport..."
+                          autoFocus
+                          className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-brand-black/30 text-brand-black"
+                          onChange={(e) => handleAirportSearch(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto pb-2">
+                      {filteredAirports.map((a, idx) => (
+                        <div key={`${a.iata}-${idx}`} className="mx-2 mb-0.5 p-3 flex items-center gap-3 hover:bg-brand-red/[0.05] cursor-pointer transition-all rounded-xl" onMouseDown={(e) => { e.preventDefault(); selectAirport('from', a); }}>
+                          <div className="w-10 h-8 bg-black/[0.04] rounded-lg flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-black text-brand-black/60 tracking-wider">{a.iata}</span>
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-bold text-brand-black truncate">{a.city}, {a.country}</span>
+                            <span className="text-[10px] font-semibold text-brand-black/40 truncate">{a.name}</span>
+                          </div>
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-bold text-brand-black truncate">{a.city}, {a.country}</span>
-                          <span className="text-[10px] font-semibold text-brand-black/40 truncate">{a.name}</span>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Swap Button */}
+            <button onClick={swapAirports} className="w-8 h-8 flex items-center justify-center text-[#448AFF] hover:bg-blue-50 rounded-full transition-colors shrink-0">
+              <ArrowRightLeft size={16} />
+            </button>
+
+            {/* TO Box */}
+            <div className="relative flex-1 min-w-[200px]">
+              <div
+                onClick={() => {
+                  setShowToMenu(!showToMenu); setShowFromMenu(false); setShowTravelersMenu(false);
+                  departureRef.current?.setOpen(false); returnRef.current?.setOpen(false);
+                  mainDepartureRef.current?.setOpen(false); mainRangeRef.current?.setOpen(false);
+                }}
+                className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
+              >
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">TO</div>
+                <div className="text-sm font-black text-brand-black truncate">{to.city}, {to.country}</div>
+              </div>
+              <AnimatePresence>
+                {showToMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}
+                    className="absolute top-full right-0 mt-2 w-[400px] bg-white rounded-2xl shadow-2xl border border-black/8 z-[200] overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-3 border-b border-black/5">
+                      <div className="flex items-center gap-2 bg-black/[0.03] rounded-xl px-3 py-2">
+                        <Search size={14} className="text-brand-black/30 shrink-0" />
+                        <input
+                          type="text"
+                          placeholder="Search city or airport..."
+                          autoFocus
+                          className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-brand-black/30 text-brand-black"
+                          onChange={(e) => handleAirportSearch(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto pb-2">
+                      {filteredAirports.map((a, idx) => (
+                        <div key={`${a.iata}-${idx}`} className="mx-2 mb-0.5 p-3 flex items-center gap-3 hover:bg-brand-red/[0.05] cursor-pointer transition-all rounded-xl" onMouseDown={(e) => { e.preventDefault(); selectAirport('to', a); }}>
+                          <div className="w-10 h-8 bg-black/[0.04] rounded-lg flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-black text-brand-black/60 tracking-wider">{a.iata}</span>
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-bold text-brand-black truncate">{a.city}, {a.country}</span>
+                            <span className="text-[10px] font-semibold text-brand-black/40 truncate">{a.name}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* DEPART Box */}
+            <div className="relative min-w-[150px]">
+              <div
+                onClick={() => {
+                  setShowFromMenu(false);
+                  setShowToMenu(false);
+                  setShowTravelersMenu(false);
+                  departureRef.current?.setOpen(true);
+                }}
+                className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all flex flex-col justify-center"
+              >
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">DEPART</div>
+                <div className="relative">
+                  <DatePicker
+                    ref={departureRef}
+                    showPopperArrow={false}
+                    selected={departureDate}
+                    minDate={new Date()}
+                    onChange={(date) => setDepartureDate(date)}
+                    dateFormat="dd MMM, yy"
+                    className="w-full bg-transparent outline-none cursor-pointer text-sm font-black text-brand-black"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* RETURN Box */}
+            <div className="relative min-w-[150px]">
+              <div
+                onClick={() => {
+                  setShowFromMenu(false);
+                  setShowToMenu(false);
+                  setShowTravelersMenu(false);
+                  if (tripType === 'one') {
+                    setTripType('round');
+                    setTimeout(() => returnRef.current?.setOpen(true), 10);
+                  } else {
+                    returnRef.current?.setOpen(true);
+                  }
+                }}
+                className={`bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all flex flex-col justify-center ${tripType === 'one' ? 'opacity-50' : ''}`}
+              >
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">RETURN</div>
+                <div className="relative">
+                  {tripType === 'one' ? (
+                    <div className="text-sm font-bold text-brand-black/30">Select Return</div>
+                  ) : (
+                    <DatePicker
+                      ref={returnRef}
+                      showPopperArrow={false}
+                      selected={endDate}
+                      startDate={startDate}
+                      endDate={endDate}
+                      minDate={startDate || new Date()}
+                      onChange={(update) => setDateRange(update)}
+                      selectsRange={true}
+                      className="w-full bg-transparent outline-none cursor-pointer text-sm font-black text-brand-black"
+                      placeholderText="Select Return"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* PASSENGER Box */}
+            <div className="relative min-w-[200px]">
+              <div
+                onClick={() => {
+                  setShowTravelersMenu(!showTravelersMenu); setShowFromMenu(false); setShowToMenu(false);
+                  departureRef.current?.setOpen(false); returnRef.current?.setOpen(false);
+                  mainDepartureRef.current?.setOpen(false); mainRangeRef.current?.setOpen(false);
+                }}
+                className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
+              >
+                <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">PASSENGER & CLASS</div>
+                <div className="text-sm font-black text-brand-black truncate">
+                  {adults + children + infants} Traveler{adults + children + infants > 1 ? 's' : ''}, {travelClass}
+                </div>
+              </div>
+              <AnimatePresence>
+                {showTravelersMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}
+                    className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-black/5 z-[100] p-6"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-bold text-brand-black">Adults</div>
+                          <div className="text-[11px] font-semibold text-brand-black/50">Aged 12+ yrs</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            onClick={() => setAdults(Math.max(1, adults - 1))}
+                            disabled={adults <= 1}
+                          >-</button>
+                          <span className="w-4 text-center font-bold text-sm">{adults}</span>
+                          <button
+                            className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            onClick={() => setAdults(adults + 1)}
+                            disabled={adults + children + infants >= 9}
+                          >+</button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
-          {/* Swap Button */}
-          <button onClick={swapAirports} className="w-8 h-8 flex items-center justify-center text-[#448AFF] hover:bg-blue-50 rounded-full transition-colors shrink-0">
-            <ArrowRightLeft size={16} />
-          </button>
-
-          {/* TO Box */}
-          <div className="relative flex-1 min-w-[200px]">
-            <div
-              onClick={() => {
-                setShowToMenu(!showToMenu); setShowFromMenu(false); setShowTravelersMenu(false);
-                departureRef.current?.setOpen(false); returnRef.current?.setOpen(false);
-                mainDepartureRef.current?.setOpen(false); mainRangeRef.current?.setOpen(false);
-              }}
-              className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
-            >
-              <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">TO</div>
-              <div className="text-sm font-black text-brand-black truncate">{to.city}, {to.country}</div>
-            </div>
-            <AnimatePresence>
-              {showToMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}
-                  className="absolute top-full right-0 mt-2 w-[400px] bg-white rounded-2xl shadow-2xl border border-black/8 z-[200] overflow-hidden"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="p-3 border-b border-black/5">
-                    <div className="flex items-center gap-2 bg-black/[0.03] rounded-xl px-3 py-2">
-                      <Search size={14} className="text-brand-black/30 shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="Search city or airport..."
-                        autoFocus
-                        className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-brand-black/30 text-brand-black"
-                        onChange={(e) => handleAirportSearch(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="max-h-80 overflow-y-auto pb-2">
-                    {filteredAirports.map((a, idx) => (
-                      <div key={`${a.iata}-${idx}`} className="mx-2 mb-0.5 p-3 flex items-center gap-3 hover:bg-brand-red/[0.05] cursor-pointer transition-all rounded-xl" onMouseDown={(e) => { e.preventDefault(); selectAirport('to', a); }}>
-                        <div className="w-10 h-8 bg-black/[0.04] rounded-lg flex items-center justify-center shrink-0">
-                          <span className="text-[10px] font-black text-brand-black/60 tracking-wider">{a.iata}</span>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-bold text-brand-black">Children</div>
+                          <div className="text-[11px] font-semibold text-brand-black/50">Aged 2-12 yrs</div>
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-bold text-brand-black truncate">{a.city}, {a.country}</span>
-                          <span className="text-[10px] font-semibold text-brand-black/40 truncate">{a.name}</span>
+                        <div className="flex items-center gap-3">
+                          <button
+                            className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            onClick={() => setChildren(Math.max(0, children - 1))}
+                            disabled={children <= 0}
+                          >-</button>
+                          <span className="w-4 text-center font-bold text-sm">{children}</span>
+                          <button
+                            className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            onClick={() => setChildren(children + 1)}
+                            disabled={adults + children + infants >= 9}
+                          >+</button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
-          {/* DEPART Box */}
-          <div className="relative min-w-[150px]">
-            <div
-              onClick={() => {
-                setShowFromMenu(false);
-                setShowToMenu(false);
-                setShowTravelersMenu(false);
-                departureRef.current?.setOpen(true);
-              }}
-              className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all flex flex-col justify-center"
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-bold text-brand-black">Infants</div>
+                          <div className="text-[11px] font-semibold text-brand-black/50">Below 2 yrs</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            onClick={() => setInfants(Math.max(0, infants - 1))}
+                            disabled={infants <= 0}
+                          >-</button>
+                          <span className="w-4 text-center font-bold text-sm">{infants}</span>
+                          <button
+                            className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            onClick={() => setInfants(infants + 1)}
+                            disabled={infants >= adults || adults + children + infants >= 9}
+                          >+</button>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-black/5">
+                        <div className="text-[11px] font-bold mb-3 uppercase tracking-wider">Travel Class</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {['Economy', 'Premium Economy', 'Business', 'First Class'].map(cls => (
+                            <button
+                              key={cls}
+                              className={`py-2 px-3 rounded-xl text-[12px] font-bold transition-all flex flex-col items-center justify-center leading-[1.2] min-h-[52px] ${travelClass === cls ? 'bg-[#448AFF] text-white shadow-md' : 'bg-black/5 hover:bg-black/10'}`}
+                              onClick={() => setTravelClass(cls)}
+                            >
+                              {cls === 'Premium Economy' ? (
+                                <>
+                                  <span>Premium</span>
+                                  <span>Economy</span>
+                                </>
+                              ) : (
+                                cls
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        className="w-full mt-2 bg-brand-black text-white py-3 rounded-xl text-xs font-bold hover:bg-[#448AFF] transition-all active:scale-95 shadow-lg"
+                        onClick={() => {
+                          setShowTravelersMenu(false);
+                          handleSearch();
+                        }}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* SEARCH Button */}
+            <button
+              onClick={handleSearch}
+              disabled={searching}
+              className="flex-1 min-w-[120px] h-[52px] bg-gradient-to-r from-[#82B1FF] to-[#448AFF] text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50"
             >
-              <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">DEPART</div>
-              <div className="relative">
-                <DatePicker
-                  ref={departureRef}
-                  showPopperArrow={false}
-                  selected={departureDate}
-                  minDate={new Date()}
-                  onChange={(date) => setDepartureDate(date)}
-                  dateFormat="dd MMM, yy"
-                  className="w-full bg-transparent outline-none cursor-pointer text-sm font-black text-brand-black"
+              {searching ? '...' : 'SEARCH'}
+            </button>
+          </div>
+        )}
+
+        {/* Edit Modal Overlay */}
+        {isEditModalOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+            <div className="bg-white rounded-[32px] p-8 max-w-5xl w-full shadow-2xl relative border border-black/5 max-h-[90vh] overflow-y-auto">
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                className="absolute top-6 right-6 text-brand-black/40 hover:text-brand-black transition-colors bg-black/[0.04] p-2 rounded-full hover:bg-black/[0.08]"
+              >
+                <X size={20} />
+              </button>
+              <h3 className="text-xl font-black text-brand-black mb-6 tracking-tight">Edit Search Itinerary</h3>
+              <div className="p-1">
+                <FlightSearch
+                  {...props}
+                  handleSearch={() => {
+                    setIsEditModalOpen(false);
+                    handleSearch();
+                  }}
+                  isCompact={false}
                 />
               </div>
             </div>
           </div>
-
-          {/* RETURN Box */}
-          <div className="relative min-w-[150px]">
-            <div
-              onClick={() => {
-                setShowFromMenu(false);
-                setShowToMenu(false);
-                setShowTravelersMenu(false);
-                if (tripType === 'one') {
-                  setTripType('round');
-                  setTimeout(() => returnRef.current?.setOpen(true), 10);
-                } else {
-                  returnRef.current?.setOpen(true);
-                }
-              }}
-              className={`bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all flex flex-col justify-center ${tripType === 'one' ? 'opacity-50' : ''}`}
-            >
-              <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">RETURN</div>
-              <div className="relative">
-                {tripType === 'one' ? (
-                  <div className="text-sm font-bold text-brand-black/30">Select Return</div>
-                ) : (
-                  <DatePicker
-                    ref={returnRef}
-                    showPopperArrow={false}
-                    selected={endDate}
-                    startDate={startDate}
-                    endDate={endDate}
-                    minDate={startDate || new Date()}
-                    onChange={(update) => setDateRange(update)}
-                    selectsRange={true}
-                    className="w-full bg-transparent outline-none cursor-pointer text-sm font-black text-brand-black"
-                    placeholderText="Select Return"
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* PASSENGER Box */}
-          <div className="relative min-w-[200px]">
-            <div
-              onClick={() => {
-                setShowTravelersMenu(!showTravelersMenu); setShowFromMenu(false); setShowToMenu(false);
-                departureRef.current?.setOpen(false); returnRef.current?.setOpen(false);
-                mainDepartureRef.current?.setOpen(false); mainRangeRef.current?.setOpen(false);
-              }}
-              className="bg-[#F2F2F2] border border-black/5 hover:border-black/10 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
-            >
-              <div className="text-[9px] font-bold text-brand-black/40 uppercase tracking-wider mb-0.5">PASSENGER & CLASS</div>
-              <div className="text-sm font-black text-brand-black truncate">
-                {adults + children + infants} Traveler{adults + children + infants > 1 ? 's' : ''}, {travelClass}
-              </div>
-            </div>
-            <AnimatePresence>
-              {showTravelersMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}
-                  className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-black/5 z-[100] p-6"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-brand-black">Adults</div>
-                        <div className="text-[11px] font-semibold text-brand-black/50">Aged 12+ yrs</div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          onClick={() => setAdults(Math.max(1, adults - 1))}
-                          disabled={adults <= 1}
-                        >-</button>
-                        <span className="w-4 text-center font-bold text-sm">{adults}</span>
-                        <button
-                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          onClick={() => setAdults(adults + 1)}
-                          disabled={adults + children + infants >= 9}
-                        >+</button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-brand-black">Children</div>
-                        <div className="text-[11px] font-semibold text-brand-black/50">Aged 2-12 yrs</div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          onClick={() => setChildren(Math.max(0, children - 1))}
-                          disabled={children <= 0}
-                        >-</button>
-                        <span className="w-4 text-center font-bold text-sm">{children}</span>
-                        <button
-                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          onClick={() => setChildren(children + 1)}
-                          disabled={adults + children + infants >= 9}
-                        >+</button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-brand-black">Infants</div>
-                        <div className="text-[11px] font-semibold text-brand-black/50">Below 2 yrs</div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          onClick={() => setInfants(Math.max(0, infants - 1))}
-                          disabled={infants <= 0}
-                        >-</button>
-                        <span className="w-4 text-center font-bold text-sm">{infants}</span>
-                        <button
-                          className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center font-bold text-brand-black hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          onClick={() => setInfants(infants + 1)}
-                          disabled={infants >= adults || adults + children + infants >= 9}
-                        >+</button>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-black/5">
-                      <div className="text-[11px] font-bold mb-3 uppercase tracking-wider">Travel Class</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {['Economy', 'Premium Economy', 'Business', 'First Class'].map(cls => (
-                          <button
-                            key={cls}
-                            className={`py-2 px-3 rounded-xl text-[12px] font-bold transition-all flex flex-col items-center justify-center leading-[1.2] min-h-[52px] ${travelClass === cls ? 'bg-[#448AFF] text-white shadow-md' : 'bg-black/5 hover:bg-black/10'}`}
-                            onClick={() => setTravelClass(cls)}
-                          >
-                            {cls === 'Premium Economy' ? (
-                              <>
-                                <span>Premium</span>
-                                <span>Economy</span>
-                              </>
-                            ) : (
-                              cls
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <button
-                      className="w-full mt-2 bg-brand-black text-white py-3 rounded-xl text-xs font-bold hover:bg-[#448AFF] transition-all active:scale-95 shadow-lg"
-                      onClick={() => {
-                        setShowTravelersMenu(false);
-                        handleSearch();
-                      }}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* SEARCH Button */}
-          <button
-            onClick={handleSearch}
-            disabled={searching}
-            className="flex-1 min-w-[120px] h-[52px] bg-gradient-to-r from-[#82B1FF] to-[#448AFF] text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50"
-          >
-            {searching ? '...' : 'SEARCH'}
-          </button>
-        </div>
+        )}
       </div>
     );
   }
@@ -446,7 +567,7 @@ const FlightSearch = ({
           <input type="radio" name="trip" checked={tripType === 'round'} onChange={() => setTripType('round')} className="w-5 h-5 accent-brand-red" /> Round Trip
         </label>
         <label className={`flex items-center gap-2 text-sm font-bold cursor-pointer ${tripType === 'multi' ? 'text-brand-black' : 'text-brand-black/60'}`}>
-          <input type="radio" name="trip" checked={tripType === 'multi'} onChange={() => setTripType('multi')} className="w-5 h-5 accent-[#448AFF]" /> Multi City
+          <input type="radio" name="trip" checked={tripType === 'multi'} onChange={() => setTripType('multi')} className="w-5 h-5 accent-brand-red" /> Multi City
         </label>
       </div>
 

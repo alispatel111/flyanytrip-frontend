@@ -274,7 +274,7 @@ const ResultCard = React.memo(({ r, isExpanded, onToggleExpand, onContinue, reva
 });
 
 const ResultsSection = () => {
-  const { from, to, departureDate, results, activeTab, searching, filters, setFilters, navigate, isFarePopupOpen, setIsFarePopupOpen } = useSearchContext();
+  const { from, to, departureDate, results, activeTab, searching, filters, setFilters, navigate, isFarePopupOpen, setIsFarePopupOpen, adults, children, infants } = useSearchContext();
   const showSkeletons = searching && activeTab === 'flights';
   const skeletonArray = Array(6).fill(0);
 
@@ -353,7 +353,10 @@ const ResultsSection = () => {
            dur: flight.dur,
            price: newFare > 0 ? newFare.toLocaleString('en-IN') : flight.price,
            class: flight.class,
-           selectedFare: flight.selectedFare || 'SAVER'
+           selectedFare: flight.selectedFare || 'SAVER',
+           adults,
+           children,
+           infants
         };
 
         const encodedData = btoa(encodeURIComponent(JSON.stringify(minimalFlightData)).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
@@ -367,7 +370,7 @@ const ResultsSection = () => {
     } finally {
       setRevalidatingId(null);
     }
-  }, [from, to, departureDate, navigate, setIsFarePopupOpen]);
+  }, [from, to, departureDate, navigate, setIsFarePopupOpen, adults, children, infants]);
 
 
   const displayResults = React.useMemo(() => {
