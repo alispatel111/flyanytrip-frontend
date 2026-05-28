@@ -150,26 +150,33 @@ const BookingReview = () => {
                 <div className="flex-1">
                   <h4 className="text-xs font-bold text-brand-black/40 uppercase tracking-widest mb-3">Included Baggage</h4>
                   <div className="flex items-center gap-6">
-                    {fareQuote && fareQuote.Segments && fareQuote.Segments[0] && fareQuote.Segments[0][0]?.Baggage ? (
-                      <>
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center text-brand-black"><CheckCircle2 size={18} /></div>
-                          <div>
-                            <div className="text-xs text-brand-black/50 font-semibold">Check-in</div>
-                            <div className="font-bold text-brand-black">{fareQuote.Segments[0][0].Baggage}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center text-brand-black"><CheckCircle2 size={18} /></div>
-                          <div>
-                            <div className="text-xs text-brand-black/50 font-semibold">Cabin</div>
-                            <div className="font-bold text-brand-black">{fareQuote.Segments[0][0].CabinBaggage || '7kg'}</div>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-sm font-bold text-brand-black">Standard Allowance included</div>
-                    )}
+                    {(() => {
+                      const displaySegments = fareQuote?.Segments || flight.raw?.Segments;
+                      const firstSegDetails = displaySegments?.[0]?.[0];
+                      if (firstSegDetails?.Baggage) {
+                        return (
+                          <>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center text-brand-black"><CheckCircle2 size={18} /></div>
+                              <div>
+                                <div className="text-xs text-brand-black/50 font-semibold">Check-in</div>
+                                <div className="font-bold text-brand-black">{firstSegDetails.Baggage}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center text-brand-black"><CheckCircle2 size={18} /></div>
+                              <div>
+                                <div className="text-xs text-brand-black/50 font-semibold">Cabin</div>
+                                <div className="font-bold text-brand-black">{firstSegDetails.CabinBaggage || '7kg'}</div>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      }
+                      return (
+                        <div className="text-sm font-bold text-brand-black">Standard Allowance included</div>
+                      );
+                    })()}
                   </div>
                 </div>
                 

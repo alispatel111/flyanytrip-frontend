@@ -387,8 +387,10 @@ const CheckoutPage = () => {
   const otherCharges = 0;
   const convenienceFee = 0;
   
-  // Extract dynamic flight details from fareQuote if available
-  const apiSegments = fareQuote?.Segments?.[0] || [];
+  // Extract dynamic flight details from fareQuote if available (flattens multi-city legs and layovers)
+  const apiSegments = fareQuote?.Segments 
+    ? (Array.isArray(fareQuote.Segments[0]) ? fareQuote.Segments.flat() : fareQuote.Segments)
+    : [];
   const firstSegment = apiSegments[0];
   const lastSegment = apiSegments[apiSegments.length - 1];
   
@@ -401,7 +403,7 @@ const CheckoutPage = () => {
     airline: firstSegment?.Airline?.AirlineName || flight.airline,
     airlineCode: firstSegment?.Airline?.AirlineCode || flight.airlineCode,
     flightNo: firstSegment?.Airline?.FlightNumber || flight.flightNo,
-    dur: firstSegment?.Duration ? `${Math.floor(firstSegment.Duration / 60)}h ${firstSegment.Duration % 60}m` : flight.dur,
+    dur: apiSegments.length > 1 ? flight.dur : (firstSegment?.Duration ? `${Math.floor(firstSegment.Duration / 60)}h ${firstSegment.Duration % 60}m` : flight.dur),
     cabinBaggage: fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CabinBaggage?.FreeText || (typeof fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CabinBaggage === 'string' ? fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CabinBaggage : '7 Kgs'),
     checkInBaggage: fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CheckedInBaggage?.FreeText || (typeof fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CheckedInBaggage === 'string' ? fareQuote?.FareBreakdown?.[0]?.SegmentDetails?.[0]?.CheckedInBaggage : '15 Kgs')
   };
@@ -423,9 +425,8 @@ const CheckoutPage = () => {
   // Check if flight is international (comparing origin and destination countries of segments or main route)
   const checkIfInternational = () => {
     // 1. If we have fareQuote Segments, check if any segment crosses countries:
-    if (fareQuote?.Segments?.[0]) {
-      const segments = fareQuote.Segments[0];
-      const isIntl = segments.some(seg => {
+    if (apiSegments && apiSegments.length > 0) {
+      const isIntl = apiSegments.some(seg => {
         const originCountry = seg.Origin?.Airport?.CountryCode || seg.Origin?.Airport?.CountryName;
         const destCountry = seg.Destination?.Airport?.CountryCode || seg.Destination?.Airport?.CountryName;
         if (originCountry && destCountry) {
