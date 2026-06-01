@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CreditCard, Wallet, Building, ShieldCheck, CheckCircle2, Loader2, ArrowLeft, Plane } from 'lucide-react';
 import { motion } from 'framer-motion';
+import api from '../services/api';
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -22,38 +23,60 @@ const Payment = () => {
     );
   }
 
-  const handlePay = () => {
+  const handlePay = async () => {
     setIsProcessing(true);
-    // Simulate Payment Processing
-    setTimeout(() => {
+    try {
+      const bookingRes = await api.post('/api/booking/confirm', {
+        isLCC: flight.raw?.IsLCC || flight.isLCC,
+        traceId: flight.traceId,
+        resultIndex: flight.resultIndex,
+        passengers: travellers.map(t => {
+          const pax = {
+            Title: t.title || 'Mr',
+            FirstName: t.firstName,
+            LastName: t.lastName,
+            PaxType: t.type === 'adult' ? 1 : (t.type === 'child' ? 2 : 3),
+            Gender: t.gender === 'Male' ? 1 : 2,
+            DateOfBirth: t.dob || (t.type === 'adult' ? "1990-01-01" : (t.type === 'child' ? "2015-01-01" : "2025-01-01"))
+          };
+          if (t.passportNumber) pax.PassportNo = t.passportNumber;
+          if (t.passportExpiry) pax.PassportExpiry = t.passportExpiry;
+          return pax;
+        }),
+        contactDetails: { Email: travellers[0].email, ContactNo: travellers[0].phone },
+        paymentData: { method, status: 'success', mockPayment: true },
+        flightSnapshot: flight,
+        totalAmount: grandTotal,
+      });
+
+      if (bookingRes.data.success) {
+        const dbBooking = bookingRes.data.data.booking;
+        
+        // Format booking data for the success page to consume
+        const mockBookingForUI = {
+          bookingId: dbBooking.booking_id,
+          pnr: bookingRes.data.data.flightBooking?.pnr || 'PENDING',
+          status: dbBooking.status,
+          passengers: travellers.map(t => ({ 
+            Title: t.title, FirstName: t.firstName, LastName: t.lastName,
+            email: travellers[0].email, phone: travellers[0].phone
+          }))
+        };
+
+        const finalData = { booking: mockBookingForUI, flight: flight };
+        sessionStorage.setItem('lastBooking', JSON.stringify(finalData));
+        
+        const shortId = btoa(dbBooking.booking_id).substring(0, 12);
+        navigate(`/booking-success?id=${shortId}`);
+      } else {
+        alert("Booking failed: " + bookingRes.data.message);
+      }
+    } catch (error) {
+      console.error("Booking error:", error);
+      alert("Error confirming booking: " + (error.response?.data?.message || error.message));
+    } finally {
       setIsProcessing(false);
-      const mockBooking = {
-        bookingId: "AT" + Math.random().toString(36).substr(2, 9).toUpperCase(),
-        pnr: "PNR" + Math.random().toString(36).substr(2, 6).toUpperCase(),
-        status: "Success",
-        passengers: travellers.map(t => ({ 
-          Title: t.title, 
-          FirstName: t.firstName, 
-          LastName: t.lastName,
-          email: travellers[0].email,
-          phone: travellers[0].phone,
-          passportNumber: t.passportNumber || null,
-          passportExpiry: t.passportExpiry || null
-        }))
-      };
-
-      const finalData = { 
-        booking: mockBooking,
-        flight: flight
-      };
-
-      // Store in SessionStorage to avoid 431 Request Header Too Large error
-      sessionStorage.setItem('lastBooking', JSON.stringify(finalData));
-
-      // Use a short ID in URL for "secure" look without bloat
-      const shortId = btoa(mockBooking.bookingId).substring(0, 12);
-      navigate(`/booking-success?id=${shortId}`);
-    }, 2500);
+    }
   };
 
   const formatPrice = (p) => Math.ceil(p || 0).toLocaleString('en-IN');

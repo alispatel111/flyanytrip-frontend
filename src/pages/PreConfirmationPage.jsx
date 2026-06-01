@@ -32,11 +32,8 @@ const PreConfirmationPage = () => {
     convenienceFee = 0
   } = location.state || {};
 
-  // Collapse controllers for sections
   const [flightCollapsed, setFlightCollapsed] = useState(false);
   const [passengerCollapsed, setPassengerCollapsed] = useState(false);
-  const [seatCollapsed, setSeatCollapsed] = useState(false);
-  const [baggageCollapsed, setBaggageCollapsed] = useState(false);
   const [addonsCollapsed, setAddonsCollapsed] = useState(false);
 
   // If page is refreshed or state is missing, fallback gracefully
@@ -364,148 +361,7 @@ const PreConfirmationPage = () => {
                </AnimatePresence>
             </div>
 
-            {/* 3. SEATS ASSIGNMENT CARD */}
-            <div className="bg-white rounded-3xl border border-black/5 shadow-xl shadow-black/5 overflow-hidden">
-               <div className="bg-black/[0.02] px-6 py-4 border-b border-black/5 flex justify-between items-center">
-                  <button 
-                     onClick={() => setSeatCollapsed(!seatCollapsed)}
-                     className="flex items-center gap-3 focus:outline-none"
-                  >
-                     <div className="w-2.5 h-6 rounded-full bg-[#E61E2A]" />
-                     <h3 className="text-xs font-black text-brand-black uppercase tracking-widest text-left">Selected Seats</h3>
-                     <span className="text-[10px] font-bold text-brand-black/30 lowercase">({seatCollapsed ? 'tap to expand' : 'tap to collapse'})</span>
-                  </button>
-                  <button 
-                     onClick={() => handleEdit('seats')}
-                     className="flex items-center gap-1.5 text-[10px] font-black text-[#008CFF] uppercase tracking-wider hover:underline"
-                  >
-                     <Edit3 size={12} /> Edit
-                  </button>
-               </div>
-
-               <AnimatePresence initial={false}>
-                 {!seatCollapsed && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="p-6 space-y-4 overflow-hidden"
-                    >
-                       {selectedSeats.length > 0 ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                           {selectedSeats.map((s, idx) => {
-                                 const travelerObj = travellers[s.paxIdx || 0] || travellers[0] || {};
-                                 const sType = getSeatType(s.code);
-                                 const extraLeg = isExtraLegroom(s.code, s.price);
-                                 const seg = segments[s.segmentIdx || 0];
-                                 const routeText = seg ? `${seg.Origin.Airport.AirportCode} → ${seg.Destination.Airport.AirportCode}` : '';
-                                 return (
-                                    <div key={idx} className="bg-black/[0.01] border border-black/5 rounded-2xl p-4 flex items-center justify-between gap-3">
-                                       <div className="flex items-center gap-3">
-                                          <div className="w-8 h-8 rounded-lg bg-[#E61E2A]/5 text-brand-red flex items-center justify-center">
-                                             <Armchair size={16} />
-                                          </div>
-                                          <div>
-                                             <div className="text-xs font-black text-brand-black flex items-center gap-1.5">
-                                                {s.code}
-                                                {routeText && (
-                                                   <span className="text-[8px] font-black text-[#008CFF] bg-[#008CFF]/5 px-1 py-0.5 rounded tracking-wide uppercase">
-                                                      {routeText}
-                                                   </span>
-                                                )}
-                                             </div>
-                                             <div className="text-[9px] font-bold text-brand-black/30 truncate max-w-[120px]">
-                                                {travelerObj.firstName || 'Passenger'} {travelerObj.lastName || ''}
-                                             </div>
-                                          </div>
-                                       </div>
-                                      
-                                      <div className="text-right">
-                                         <span className="text-[9px] font-black text-brand-black/50 bg-black/5 px-2 py-0.5 rounded uppercase tracking-wider block mb-1">
-                                            {sType} {extraLeg && '• Legroom'}
-                                         </span>
-                                         <span className="text-[10px] font-black text-brand-red">{s.price > 0 ? `₹${formatPrice(s.price)}` : 'FREE'}</span>
-                                      </div>
-                                   </div>
-                                );
-                             })}
-                          </div>
-                       ) : (
-                          <div className="text-center py-6 text-brand-black/40 text-xs font-bold bg-black/[0.01] rounded-2xl border border-dashed border-black/10">
-                             No seats selected. Standard free seat auto-allocation will occur at airport check-in.
-                          </div>
-                       )}
-                    </motion.div>
-                 )}
-               </AnimatePresence>
-            </div>
-
-            {/* 4. BAGGAGE DETAILS CARD */}
-            <div className="bg-white rounded-3xl border border-black/5 shadow-xl shadow-black/5 overflow-hidden">
-               <div className="bg-black/[0.02] px-6 py-4 border-b border-black/5 flex justify-between items-center">
-                  <button 
-                     onClick={() => setBaggageCollapsed(!baggageCollapsed)}
-                     className="flex items-center gap-3 focus:outline-none"
-                  >
-                     <div className="w-2.5 h-6 rounded-full bg-[#E61E2A]" />
-                     <h3 className="text-xs font-black text-brand-black uppercase tracking-widest text-left">Baggage Details</h3>
-                     <span className="text-[10px] font-bold text-brand-black/30 lowercase">({baggageCollapsed ? 'tap to expand' : 'tap to collapse'})</span>
-                  </button>
-                  <button 
-                     onClick={() => handleEdit('addons')}
-                     className="flex items-center gap-1.5 text-[10px] font-black text-[#008CFF] uppercase tracking-wider hover:underline"
-                  >
-                     <Edit3 size={12} /> Edit
-                  </button>
-               </div>
-
-               <AnimatePresence initial={false}>
-                 {!baggageCollapsed && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="p-6 space-y-4 overflow-hidden"
-                    >
-                       {/* Standard baggage row */}
-                       <div className="grid grid-cols-2 gap-4 pb-4 border-b border-black/[0.03]">
-                          <div className="bg-[#E7F3FF]/30 p-3 rounded-2xl border border-[#B3D9FF]/20">
-                             <span className="text-[8px] font-black text-[#008CFF] uppercase tracking-widest block mb-0.5">Standard Cabin Allowance</span>
-                             <span className="text-xs font-black text-brand-black">{flight.cabinBaggage || '7 Kgs'}</span>
-                             <span className="text-[9px] font-bold text-brand-black/30 block mt-1">Included per passenger</span>
-                          </div>
-                          <div className="bg-[#E7F3FF]/30 p-3 rounded-2xl border border-[#B3D9FF]/20">
-                             <span className="text-[8px] font-black text-[#008CFF] uppercase tracking-widest block mb-0.5">Standard Check-In Allowance</span>
-                             <span className="text-xs font-black text-brand-black">{flight.checkInBaggage || '15 Kgs'}</span>
-                             <span className="text-[9px] font-bold text-brand-black/30 block mt-1">Included per passenger</span>
-                          </div>
-                       </div>
-
-                       {/* Extra Purchased Baggage Grid */}
-                       <div className="pt-2">
-                          <h4 className="text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-3">Extra Baggage Selection</h4>
-                          {selectedBaggage.length > 0 ? (
-                             <div className="space-y-2">
-                                {selectedBaggage.map((bag, bIdx) => (
-                                   <div key={bIdx} className="bg-green-50/20 border border-green-100 rounded-xl p-3 flex justify-between items-center">
-                                      <div className="flex items-center gap-2">
-                                         <Luggage size={14} className="text-green-600" />
-                                         <span className="text-xs font-black text-brand-black">{bag.weight || bag.Weight} Extra Luggage</span>
-                                      </div>
-                                      <span className="text-xs font-black text-brand-red">₹{formatPrice(bag.price || bag.Price)}</span>
-                                   </div>
-                                ))}
-                             </div>
-                          ) : (
-                             <span className="text-[10px] font-bold text-brand-black/30">No extra baggage purchased. Standard allowances apply.</span>
-                          )}
-                       </div>
-                    </motion.div>
-                 )}
-               </AnimatePresence>
-            </div>
-
-            {/* 5. ADD-ONS & EXTRA SERVICES */}
+            {/* 3. PASSENGER ADD-ONS (SEATS, MEALS & BAGGAGE) */}
             <div className="bg-white rounded-3xl border border-black/5 shadow-xl shadow-black/5 overflow-hidden">
                <div className="bg-black/[0.02] px-6 py-4 border-b border-black/5 flex justify-between items-center">
                   <button 
@@ -513,7 +369,7 @@ const PreConfirmationPage = () => {
                      className="flex items-center gap-3 focus:outline-none"
                   >
                      <div className="w-2.5 h-6 rounded-full bg-[#E61E2A]" />
-                     <h3 className="text-xs font-black text-brand-black uppercase tracking-widest text-left">Meals & Special Services</h3>
+                     <h3 className="text-xs font-black text-brand-black uppercase tracking-widest text-left">Seats, Meals & Extra Baggage</h3>
                      <span className="text-[10px] font-bold text-brand-black/30 lowercase">({addonsCollapsed ? 'tap to expand' : 'tap to collapse'})</span>
                   </button>
                   <button 
@@ -530,23 +386,76 @@ const PreConfirmationPage = () => {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="p-6 space-y-4 overflow-hidden"
+                      className="p-6 space-y-6 overflow-hidden"
                     >
-                       {/* Meals */}
-                       <div>
-                          <h4 className="text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Coffee size={12} /> Meal Selections</h4>
-                          {selectedMeals.length > 0 ? (
-                             <div className="space-y-2">
-                                {selectedMeals.map((meal, mIdx) => (
-                                   <div key={mIdx} className="bg-amber-50/20 border border-amber-100 rounded-xl p-3 flex justify-between items-center">
-                                      <span className="text-xs font-black text-brand-black">{meal.name || meal.Description}</span>
-                                      <span className="text-xs font-black text-brand-red">₹{formatPrice(meal.price || meal.Price)}</span>
-                                   </div>
-                                ))}
-                             </div>
-                          ) : (
-                             <span className="text-[10px] font-bold text-brand-black/30">No special meals selected. Standard in-flight snack options apply.</span>
-                          )}
+                       {/* Standard baggage info banner */}
+                       <div className="flex gap-4 p-4 bg-[#E7F3FF]/30 border border-[#B3D9FF]/30 rounded-2xl">
+                          <div className="flex-1">
+                             <span className="text-[8px] font-black text-[#008CFF] uppercase tracking-widest block mb-0.5">Standard Cabin</span>
+                             <span className="text-xs font-black text-brand-black">{flight.cabinBaggage || '7 Kgs'}</span>
+                          </div>
+                          <div className="w-px bg-[#B3D9FF]/30" />
+                          <div className="flex-1">
+                             <span className="text-[8px] font-black text-[#008CFF] uppercase tracking-widest block mb-0.5">Standard Check-In</span>
+                             <span className="text-xs font-black text-brand-black">{flight.checkInBaggage || '15 Kgs'}</span>
+                          </div>
+                       </div>
+
+                       <div className="space-y-4">
+                          {travellers.map((t, idx) => {
+                             const seat = selectedSeats.find(s => s.paxIdx === idx);
+                             const meal = selectedMeals.find(m => m.paxIdx === idx);
+                             const bag = selectedBaggage.find(b => b.paxIdx === idx);
+
+                             return (
+                               <div key={idx} className="bg-black/[0.02] border border-black/5 rounded-2xl p-5 relative">
+                                  <div className="flex items-center gap-3 mb-4">
+                                     <div className="w-7 h-7 bg-brand-red/10 text-brand-red rounded-full flex items-center justify-center font-bold text-xs">
+                                        {idx + 1}
+                                     </div>
+                                     <div className="font-bold text-brand-black text-sm">{t.firstName} {t.lastName}</div>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                     {/* Seat */}
+                                     <div className="bg-white p-3 rounded-xl border border-black/5">
+                                        <div className="flex items-center gap-1.5 mb-2">
+                                           <Armchair size={12} className="text-brand-black/40" />
+                                           <div className="text-[9px] font-black text-brand-black/40 uppercase tracking-widest">Seat</div>
+                                        </div>
+                                        <div className="flex justify-between items-end">
+                                           <div className="font-black text-brand-black text-sm">{seat ? seat.code : 'Free/Auto'}</div>
+                                           {seat && seat.price > 0 && <div className="text-[10px] font-black text-brand-red">₹{formatPrice(seat.price)}</div>}
+                                        </div>
+                                     </div>
+
+                                     {/* Meal */}
+                                     <div className="bg-white p-3 rounded-xl border border-black/5">
+                                        <div className="flex items-center gap-1.5 mb-2">
+                                           <Coffee size={12} className="text-brand-black/40" />
+                                           <div className="text-[9px] font-black text-brand-black/40 uppercase tracking-widest">Meal</div>
+                                        </div>
+                                        <div className="flex justify-between items-end">
+                                           <div className="font-bold text-brand-black text-[11px] truncate">{meal ? meal.name : 'Standard'}</div>
+                                           {meal && meal.price > 0 && <div className="text-[10px] font-black text-brand-red">₹{formatPrice(meal.price)}</div>}
+                                        </div>
+                                     </div>
+
+                                     {/* Baggage */}
+                                     <div className="bg-white p-3 rounded-xl border border-black/5">
+                                        <div className="flex items-center gap-1.5 mb-2">
+                                           <Luggage size={12} className="text-brand-black/40" />
+                                           <div className="text-[9px] font-black text-brand-black/40 uppercase tracking-widest">Extra Baggage</div>
+                                        </div>
+                                        <div className="flex justify-between items-end">
+                                           <div className="font-bold text-brand-black text-[11px]">{bag ? `+ ${bag.weight}` : 'None'}</div>
+                                           {bag && bag.price > 0 && <div className="text-[10px] font-black text-brand-red">₹{formatPrice(bag.price)}</div>}
+                                        </div>
+                                     </div>
+                                  </div>
+                               </div>
+                             );
+                          })}
                        </div>
                     </motion.div>
                  )}
@@ -681,7 +590,7 @@ const PreConfirmationPage = () => {
                 {/* Proceed button */}
                 <button 
                   onClick={proceedToPayment}
-                  className="w-full bg-brand-red text-white py-4.5 rounded-xl font-black text-base uppercase tracking-widest shadow-lg shadow-brand-red/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  className="w-full bg-brand-red text-white py-4 rounded-xl font-black text-base uppercase tracking-widest shadow-lg shadow-brand-red/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
                    Proceed to Payment <ArrowRight size={18} />
                 </button>

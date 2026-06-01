@@ -167,6 +167,7 @@ const CheckoutPage = () => {
   const [activeSegmentIdx, setActiveSegmentIdx] = useState(0);
   const [selectedMeals, setSelectedMeals] = useState(location.state?.selectedMeals || []);
   const [selectedBaggage, setSelectedBaggage] = useState(location.state?.selectedBaggage || []);
+  const [activeAddonTravellerIdx, setActiveAddonTravellerIdx] = useState(0);
   const [couponCode, setCouponCode] = useState(location.state?.couponCode || '');
   const [couponDiscount, setCouponDiscount] = useState(location.state?.couponDiscount || 0);
   const [couponError, setCouponError] = useState('');
@@ -175,21 +176,70 @@ const CheckoutPage = () => {
   const [gstData, setGstData] = useState(location.state?.gstData || { companyName: '', registrationNo: '' });
   const [selectedState, setSelectedState] = useState(location.state?.selectedState || 'Gujarat');
 
-  const handleAddMeal = (name, price) => {
-    const mealCount = selectedMeals.filter(m => m.name === name).length;
-    const totalMealsCount = selectedMeals.length;
-    if (mealCount < totalTravellersCount && totalMealsCount < totalTravellersCount) {
-      setSelectedMeals([...selectedMeals, { name, price }]);
+  const handleToggleMeal = (name, price, travellerIdx) => {
+    const newMeals = [...selectedMeals];
+    const existingIdx = newMeals.findIndex(m => m.paxIdx === travellerIdx);
+    
+    if (existingIdx !== -1) {
+      if (newMeals[existingIdx].name === name) {
+        // Remove if clicking the same meal
+        newMeals.splice(existingIdx, 1);
+      } else {
+        // Replace with new meal
+        newMeals[existingIdx] = { name, price, paxIdx: travellerIdx };
+      }
+    } else {
+      newMeals.push({ name, price, paxIdx: travellerIdx });
+      
+      // Auto-advance
+      const seatTravellers = travellers.filter(t => t.type !== 'infant');
+      if (seatTravellers.length > 1) {
+         let nextIdx = -1;
+         const currentSubIdx = seatTravellers.findIndex((_, idx) => travellers.indexOf(seatTravellers[idx]) === travellerIdx);
+         for (let i = 1; i <= seatTravellers.length; i++) {
+            const checkSubIdx = (currentSubIdx + i) % seatTravellers.length;
+            const absIdx = travellers.indexOf(seatTravellers[checkSubIdx]);
+            if (!newMeals.some(m => m.paxIdx === absIdx)) {
+               nextIdx = absIdx;
+               break;
+            }
+         }
+         if (nextIdx !== -1) setActiveAddonTravellerIdx(nextIdx);
+      }
     }
+    setSelectedMeals(newMeals);
   };
 
-  const handleRemoveMeal = (name) => {
-    const idx = selectedMeals.findIndex(m => m.name === name);
-    if (idx !== -1) {
-      const newMeals = [...selectedMeals];
-      newMeals.splice(idx, 1);
-      setSelectedMeals(newMeals);
+  const handleToggleBaggage = (weight, price, code, travellerIdx) => {
+    const newBags = [...selectedBaggage];
+    const existingIdx = newBags.findIndex(b => b.paxIdx === travellerIdx);
+    
+    if (existingIdx !== -1) {
+      if (newBags[existingIdx].code === code) {
+        newBags.splice(existingIdx, 1);
+      } else {
+        newBags[existingIdx] = { weight, price, code, paxIdx: travellerIdx };
+      }
+    } else {
+      newBags.push({ weight, price, code, paxIdx: travellerIdx });
+      
+      // Auto-advance
+      const seatTravellers = travellers.filter(t => t.type !== 'infant');
+      if (seatTravellers.length > 1) {
+         let nextIdx = -1;
+         const currentSubIdx = seatTravellers.findIndex((_, idx) => travellers.indexOf(seatTravellers[idx]) === travellerIdx);
+         for (let i = 1; i <= seatTravellers.length; i++) {
+            const checkSubIdx = (currentSubIdx + i) % seatTravellers.length;
+            const absIdx = travellers.indexOf(seatTravellers[checkSubIdx]);
+            if (!newBags.some(m => m.paxIdx === absIdx)) {
+               nextIdx = absIdx;
+               break;
+            }
+         }
+         if (nextIdx !== -1) setActiveAddonTravellerIdx(nextIdx);
+      }
     }
+    setSelectedBaggage(newBags);
   };
 
   // UI State
@@ -1947,103 +1997,110 @@ const CheckoutPage = () => {
                            )}
                            {activeSection === 'addons' && (
                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-6 overflow-hidden">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                   {/* Meals */}
-                                   <div className="bg-black/[0.02] rounded-2xl p-6 border border-black/5">
-                                      <h4 className="text-xs font-black text-brand-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                                         <Coffee size={14} /> Meal Options
-                                      </h4>
-                                      <div className="space-y-2">
-                                          {(ssrData?.Meal?.[0] || [{ Description: 'Standard Veg Meal', Price: 450 }, { Description: 'Non-Veg Meal', Price: 550 }]).map((meal, idx) => {
-                                             const mName = meal.Description || meal.name;
-                                             const mPrice = meal.Price || meal.price;
-                                             const mealCount = selectedMeals.filter(m => m.name === mName).length;
-                                             const totalMealsCount = selectedMeals.length;
-                                             const isAddDisabled = mealCount >= totalTravellersCount || totalMealsCount >= totalTravellersCount;
+                                 <div className="flex flex-col items-center w-full mb-6">
+                                    <div className="flex gap-2 overflow-x-auto w-full pb-2 px-1 scrollbar-thin">
+                                       {travellers.filter(t => t.type !== 'infant').map((t) => {
+                                          const originalIdx = travellers.indexOf(t);
+                                          const meal = selectedMeals.find(m => m.paxIdx === originalIdx);
+                                          const bag = selectedBaggage.find(b => b.paxIdx === originalIdx);
+                                          const isSelected = activeAddonTravellerIdx === originalIdx;
+                                          return (
+                                             <button
+                                                key={originalIdx}
+                                                type="button"
+                                                onClick={() => setActiveAddonTravellerIdx(originalIdx)}
+                                                className={`flex-1 min-w-[95px] py-2 px-3 rounded-xl border text-center transition-all ${
+                                                   isSelected 
+                                                      ? 'border-brand-red bg-brand-red/5 text-brand-red font-black shadow-sm' 
+                                                      : 'border-black/5 bg-white text-brand-black/60 font-bold hover:border-black/20'
+                                                }`}
+                                             >
+                                                <div className="text-[8px] uppercase tracking-widest text-brand-black/35 mb-0.5">
+                                                   {t.type === 'adult' 
+                                                      ? `Adult ${travellers.filter((p, i) => p.type === 'adult' && i <= originalIdx).length}` 
+                                                      : `Child ${travellers.filter((p, i) => p.type === 'child' && i <= originalIdx).length}`
+                                                   }
+                                                </div>
+                                                <div className="text-[10px] truncate max-w-[80px] font-bold">
+                                                   {t.firstName ? `${t.firstName}` : `Pax ${originalIdx + 1}`}
+                                                </div>
+                                                <div className="text-[8px] font-black mt-0.5 flex items-center justify-center gap-1">
+                                                   <span className={meal || bag ? 'text-brand-red' : 'text-brand-black/20'}>
+                                                      {meal ? 'M' : ''}{meal && bag ? ' + ' : ''}{bag ? 'B' : ''}{!meal && !bag ? '—' : ''}
+                                                   </span>
+                                                </div>
+                                             </button>
+                                          );
+                                       })}
+                                    </div>
+                                 </div>
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Meals */}
+                                    <div className="bg-black/[0.02] rounded-2xl p-6 border border-black/5">
+                                       <h4 className="text-xs font-black text-brand-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                                          <Coffee size={14} /> Meal Options
+                                       </h4>
+                                       <div className="space-y-2">
+                                           {(ssrData?.Meal?.[0] || [{ Description: 'Standard Veg Meal', Price: 450 }, { Description: 'Non-Veg Meal', Price: 550 }]).map((meal, idx) => {
+                                              const mName = meal.Description || meal.name;
+                                              const mPrice = meal.Price || meal.price;
+                                              const isSelected = selectedMeals.some(m => m.name === mName && m.paxIdx === activeAddonTravellerIdx);
 
+                                              return (
+                                                 <div key={idx} 
+                                                      onClick={() => handleToggleMeal(mName, mPrice, activeAddonTravellerIdx)}
+                                                      className={`bg-white p-3 rounded-xl border flex items-center justify-between group transition-all cursor-pointer ${isSelected ? 'border-brand-red ring-1 ring-brand-red/20' : 'border-black/5 hover:border-brand-red/30'}`}>
+                                                    <div>
+                                                       <div className="text-[10px] font-bold text-brand-black">{mName}</div>
+                                                       <div className="text-[9px] font-black text-brand-red mt-0.5">₹{mPrice}</div>
+                                                    </div>
+                                                    <div className={`text-[9px] font-black uppercase tracking-widest ${isSelected ? 'text-brand-red' : 'text-brand-black/20 group-hover:text-brand-red/50'}`}>
+                                                       {isSelected ? 'Added' : 'Add'}
+                                                    </div>
+                                                 </div>
+                                              );
+                                           })}
+                                       </div>
+                                    </div>
+
+                                    {/* Baggage */}
+                                    <div className="bg-black/[0.02] rounded-2xl p-6 border border-black/5">
+                                       <h4 className="text-xs font-black text-brand-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                                          <Luggage size={14} /> Extra Baggage
+                                       </h4>
+                                       <div className="space-y-2">
+                                          {(ssrData?.Baggage?.[0] || [
+                                            { Weight: '5 KG', Price: 1200, Code: 'B5' }, 
+                                            { Weight: '10 KG', Price: 2200, Code: 'B10' },
+                                            { Weight: '15 KG', Price: 3200, Code: 'B15' }
+                                          ]).map((bag, idx) => {
+                                             const isSelected = selectedBaggage.some(b => b.code === (bag.Code || bag.Weight) && b.paxIdx === activeAddonTravellerIdx);
                                              return (
-                                                <div key={idx} className="bg-white p-3 rounded-xl border border-black/5 flex items-center justify-between group hover:border-brand-red/30 transition-all">
-                                                   <div>
-                                                      <div className="text-[10px] font-bold text-brand-black">{mName}</div>
-                                                      <div className="text-[9px] font-black text-brand-red mt-0.5">₹{mPrice}</div>
-                                                   </div>
-                                                   {mealCount > 0 ? (
-                                                      <div className="flex items-center gap-2">
-                                                         <button 
-                                                            onClick={() => handleRemoveMeal(mName)}
-                                                            className="w-6 h-6 rounded-full bg-black/5 text-brand-black flex items-center justify-center hover:bg-brand-red hover:text-white transition-all text-xs font-bold"
-                                                         >
-                                                            −
-                                                         </button>
-                                                         <span className="text-xs font-black text-brand-black w-4 text-center">{mealCount}</span>
-                                                         <button 
-                                                            disabled={isAddDisabled}
-                                                            onClick={() => handleAddMeal(mName, mPrice)}
-                                                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isAddDisabled ? 'bg-black/5 text-brand-black/20 cursor-not-allowed' : 'bg-black/5 text-brand-black hover:bg-brand-red hover:text-white'}`}
-                                                         >
-                                                            +
-                                                         </button>
+                                                <div 
+                                                  key={idx} 
+                                                  onClick={() => handleToggleBaggage(bag.Weight, bag.Price, bag.Code || bag.Weight, activeAddonTravellerIdx)}
+                                                  className={`bg-white p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between group ${isSelected ? 'border-brand-red ring-1 ring-brand-red/20' : 'border-black/5 hover:border-brand-red/30'}`}
+                                                >
+                                                   <div className="flex items-center gap-3">
+                                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isSelected ? 'bg-brand-red text-white' : 'bg-black/5 text-brand-black/40'}`}>
+                                                         <Luggage size={16} />
                                                       </div>
-                                                   ) : (
-                                                      <button 
-                                                         disabled={isAddDisabled}
-                                                         onClick={() => handleAddMeal(mName, mPrice)}
-                                                         className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isAddDisabled ? 'bg-black/5 text-brand-black/20 cursor-not-allowed' : 'bg-black/5 text-brand-black hover:bg-brand-red hover:text-white'}`}
-                                                      >
-                                                         +
-                                                      </button>
-                                                   )}
+                                                      <div>
+                                                         <div className="text-[11px] font-black text-brand-black">{bag.Weight || bag.weight} Extra</div>
+                                                      </div>
+                                                   </div>
+                                                   <div className="text-right">
+                                                      <div className="text-[11px] font-black text-brand-red">₹{bag.Price || bag.price}</div>
+                                                      <div className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isSelected ? 'text-brand-red' : 'text-brand-black/20'}`}>
+                                                         {isSelected ? 'Added' : 'Add'}
+                                                      </div>
+                                                   </div>
                                                 </div>
                                              );
                                           })}
-                                      </div>
-                                   </div>
-
-                                   {/* Baggage */}
-                                   <div className="bg-black/[0.02] rounded-2xl p-6 border border-black/5">
-                                      <h4 className="text-xs font-black text-brand-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                                         <Luggage size={14} /> Extra Baggage
-                                      </h4>
-                                      <div className="space-y-2">
-                                         {(ssrData?.Baggage?.[0] || [
-                                           { Weight: '5 KG', Price: 1200, Code: 'B5' }, 
-                                           { Weight: '10 KG', Price: 2200, Code: 'B10' },
-                                           { Weight: '15 KG', Price: 3200, Code: 'B15' }
-                                         ]).map((bag, idx) => {
-                                            const isSelected = selectedBaggage.some(b => b.code === (bag.Code || bag.Weight));
-                                            return (
-                                               <div 
-                                                 key={idx} 
-                                                 onClick={() => {
-                                                   if (isSelected) {
-                                                     setSelectedBaggage(selectedBaggage.filter(b => b.code !== (bag.Code || bag.Weight)));
-                                                   } else {
-                                                     setSelectedBaggage([...selectedBaggage, { weight: bag.Weight, price: bag.Price, code: bag.Code || bag.Weight }]);
-                                                   }
-                                                 }}
-                                                 className={`bg-white p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between group ${isSelected ? 'border-brand-red ring-1 ring-brand-red/20' : 'border-black/5 hover:border-brand-red/30'}`}
-                                               >
-                                                  <div className="flex items-center gap-3">
-                                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isSelected ? 'bg-brand-red text-white' : 'bg-black/5 text-brand-black/40'}`}>
-                                                        <Luggage size={16} />
-                                                     </div>
-                                                     <div>
-                                                        <div className="text-[11px] font-black text-brand-black">{bag.Weight || bag.weight} Extra</div>
-                                                        <div className="text-[10px] font-bold text-brand-black/30">Per Traveller</div>
-                                                     </div>
-                                                  </div>
-                                                  <div className="text-right">
-                                                     <div className="text-[11px] font-black text-brand-red">₹{bag.Price || bag.price}</div>
-                                                     <div className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isSelected ? 'text-brand-red' : 'text-brand-black/20'}`}>
-                                                        {isSelected ? 'Added' : 'Add'}
-                                                     </div>
-                                                  </div>
-                                               </div>
-                                            );
-                                         })}
-                                      </div>
-                                   </div>
-                                </div>
+                                       </div>
+                                    </div>
+                                 </div>
                              </motion.div>
                            )}
                         </AnimatePresence>

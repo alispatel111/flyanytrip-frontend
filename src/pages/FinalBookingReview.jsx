@@ -297,27 +297,79 @@ const FinalBookingReview = () => {
                </div>
             </div>
 
-            {/* 3. SSR Summary (If any) */}
+            {/* 3. Passenger-wise Add-ons Summary */}
             {ssrSelections && (
               <div className="bg-white rounded-3xl overflow-hidden border border-black/5 shadow-sm">
-                 <div className="bg-black/[0.02] px-8 py-4 border-b border-black/5">
-                    <h3 className="text-sm font-black text-brand-black uppercase tracking-widest">Add-ons (Seats & Meals)</h3>
+                 <div className="bg-black/[0.02] px-8 py-4 border-b border-black/5 flex justify-between items-center">
+                    <h3 className="text-sm font-black text-brand-black uppercase tracking-widest">Seats & Meals Assignments</h3>
                  </div>
-                 <div className="p-8">
-                    <div className="space-y-4">
-                       {ssrSelections.seats?.map((s, i) => (
-                         <div key={i} className="flex justify-between items-center text-sm font-bold">
-                            <span className="text-brand-black/60">Seat: {s.code} (P{s.paxIdx + 1})</span>
-                            <span className="text-brand-black">₹{s.price}</span>
-                         </div>
-                       ))}
-                       {ssrSelections.meals?.map((m, i) => (
-                         <div key={i} className="flex justify-between items-center text-sm font-bold">
-                            <span className="text-brand-black/60">Meal: {m.name}</span>
-                            <span className="text-brand-black">₹{m.price}</span>
-                         </div>
-                       ))}
-                    </div>
+                 <div className="p-8 space-y-6">
+                    {travellers.map((t, idx) => {
+                      const seat = ssrSelections.seats?.[idx];
+                      const meal = ssrSelections.meals?.[idx];
+                      
+                      return (
+                        <div key={idx} className="bg-black/[0.02] border border-black/5 rounded-2xl p-6 relative">
+                           <div className="flex items-center gap-3 mb-4">
+                              <div className="w-8 h-8 bg-brand-red/10 text-brand-red rounded-full flex items-center justify-center font-bold text-xs">
+                                 {idx + 1}
+                              </div>
+                              <div className="font-bold text-brand-black">{t.firstName} {t.lastName}</div>
+                           </div>
+
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Seat Assignment */}
+                              <div className="bg-white p-4 rounded-xl border border-black/5 flex justify-between items-center">
+                                 <div>
+                                    <div className="text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-1">Seat</div>
+                                    <div className="font-bold text-brand-black">
+                                      {seat ? seat.code : 'Not Assigned'}
+                                    </div>
+                                    {seat && <div className="text-xs text-brand-black/60 mt-1">₹{seat.price}</div>}
+                                 </div>
+                                 <button 
+                                   onClick={() => navigate('/seat-selection', { state: { flight, fareQuote, travellers, ssrSelections } })}
+                                   className="text-xs font-bold text-brand-red uppercase underline"
+                                 >
+                                   Edit
+                                 </button>
+                              </div>
+
+                              {/* Meal Assignment */}
+                              <div className="bg-white p-4 rounded-xl border border-black/5 flex justify-between items-center">
+                                 <div>
+                                    <div className="text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-1">Meal</div>
+                                    <div className="font-bold text-brand-black">
+                                      {meal ? meal.name : 'Not Assigned'}
+                                    </div>
+                                    {meal && <div className="text-xs text-brand-black/60 mt-1">₹{meal.price || meal.Price}</div>}
+                                 </div>
+                                 <button 
+                                   onClick={() => navigate('/addons', { state: { flight, fareQuote, travellers, ssrSelections } })}
+                                   className="text-xs font-bold text-brand-red uppercase underline"
+                                 >
+                                   Edit
+                                 </button>
+                              </div>
+                           </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Baggage Summary */}
+                    {ssrSelections.baggage?.length > 0 && (
+                      <div className="mt-6 pt-6 border-t border-black/5">
+                        <div className="text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-3">Excess Baggage</div>
+                        <div className="space-y-2">
+                           {ssrSelections.baggage.map((b, i) => (
+                             <div key={i} className="flex justify-between items-center text-sm font-bold">
+                                <span className="text-brand-black/60">Extra Weight: {b.weight}</span>
+                                <span className="text-brand-black">₹{b.price}</span>
+                             </div>
+                           ))}
+                        </div>
+                      </div>
+                    )}
                  </div>
               </div>
             )}
