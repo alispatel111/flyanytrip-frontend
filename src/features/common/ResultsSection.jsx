@@ -531,17 +531,27 @@ const ResultsSection = () => {
                       <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="text-center py-24 bg-white rounded-3xl border border-black/5"
+                        className="text-center py-24 bg-white rounded-3xl border border-black/5 px-6"
                       >
                         <Plane size={64} className="mx-auto text-brand-black/10 mb-6" />
-                        <h3 className="text-2xl font-bold text-brand-black mb-2">No Flights Found</h3>
-                        <p className="text-brand-black/50 font-medium">Try adjusting your filters or search criteria.</p>
-                        <button 
-                          onClick={() => setFilters({ priceRange: [0, 500000], airlines: [], depTime: [], arrTime: [], stops: [], duration: 100 })}
-                          className="mt-8 text-brand-red font-bold hover:underline"
-                        >
-                          Reset All Filters
-                        </button>
+                        {searchError ? (
+                          <>
+                            <h3 className="text-2xl font-bold text-brand-red mb-2">Search Failed</h3>
+                            <p className="text-brand-black/50 font-medium max-w-md mx-auto">{searchError}</p>
+                            <p className="text-xs text-brand-black/30 mt-4">This could be due to a temporary network lag, request timeout (Vercel limit is 10s), or an issue with the flight provider API. Please try searching again.</p>
+                          </>
+                        ) : (
+                          <>
+                            <h3 className="text-2xl font-bold text-brand-black mb-2">No Flights Found</h3>
+                            <p className="text-brand-black/50 font-medium">Try adjusting your filters or search criteria.</p>
+                            <button 
+                              onClick={() => setFilters({ priceRange: [0, 500000], airlines: [], depTime: [], arrTime: [], stops: [], duration: 100 })}
+                              className="mt-8 text-brand-red font-bold hover:underline"
+                            >
+                              Reset All Filters
+                            </button>
+                          </>
+                        )}
                       </motion.div>
                     )}
                   </div>

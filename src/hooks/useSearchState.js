@@ -346,31 +346,8 @@ export const useSearchState = () => {
     }, 1200);
   };
 
-  // --- Automatic API Trigger on State Change (Debounced) ---
-  const autoSearchTimeoutRef = useRef(null);
-  const isInitialMount = useRef(true);
   const lastFetchedQueryRef = useRef("");
 
-  useEffect(() => {
-    // Only auto-trigger if we are already on a search results page
-    const isFlightSearchRoute = location.pathname.startsWith('/flights/') && location.pathname.length > 9;
-    if (!isFlightSearchRoute) return;
-
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-
-    if (autoSearchTimeoutRef.current) clearTimeout(autoSearchTimeoutRef.current);
-
-    autoSearchTimeoutRef.current = setTimeout(() => {
-      handleSearch();
-    }, 500); // 500ms debounce
-
-    return () => {
-      if (autoSearchTimeoutRef.current) clearTimeout(autoSearchTimeoutRef.current);
-    };
-  }, [from?.iata, to?.iata, departureDate, tripType]);
 
   // Decode URL state and fetch flights if on flight search route
   useEffect(() => {
