@@ -274,7 +274,7 @@ const ResultCard = React.memo(({ r, isExpanded, onToggleExpand, onContinue, reva
 });
 
 const ResultsSection = () => {
-  const { from, to, departureDate, results, activeTab, searching, filters, setFilters, navigate, isFarePopupOpen, setIsFarePopupOpen, adults, children, infants } = useSearchContext();
+  const { from, to, departureDate, results, activeTab, searching, filters, setFilters, navigate, isFarePopupOpen, setIsFarePopupOpen, adults, children, infants, searchError } = useSearchContext();
   const showSkeletons = searching && activeTab === 'flights';
   const skeletonArray = Array(6).fill(0);
 
