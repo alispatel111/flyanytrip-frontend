@@ -80,15 +80,17 @@
 }
 
 .react-datepicker__day--selected, 
-.react-datepicker__day--in-range,
-.react-datepicker__day--keyboard-selected {
+.react-datepicker__day--in-range {
   @apply !bg-brand-red !text-white !rounded-lg !border-none;
+}
+
+.react-datepicker__day--keyboard-selected:not(.react-datepicker__day--selected) {
+  @apply !bg-brand-red/10 !text-brand-black;
 }
 
 /* Fix: Price text contrast on selected dates */
 .react-datepicker__day--selected span,
-.react-datepicker__day--in-range span,
-.react-datepicker__day--keyboard-selected span {
+.react-datepicker__day--in-range span {
   color: white !important;
 }
 

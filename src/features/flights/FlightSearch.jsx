@@ -82,6 +82,56 @@ const FlightSearch = (props) => {
 
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
 
+  const [selectedIndex, setSelectedIndex] = React.useState(-1);
+
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [filteredAirports, showFromMenu, showToMenu, activeMultiMenu]);
+
+  useEffect(() => {
+    if (selectedIndex >= 0) {
+      const el = document.getElementById('selected-airport-item');
+      if (el) {
+        el.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [selectedIndex]);
+
+  const handleKeyDown = (e, type, index = null) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev < filteredAirports.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedIndex >= 0 && selectedIndex < filteredAirports.length) {
+        const selected = filteredAirports[selectedIndex];
+        if (type === 'from') {
+          selectAirport('from', selected);
+          setShowFromMenu(false);
+        } else if (type === 'to') {
+          selectAirport('to', selected);
+          setShowToMenu(false);
+        } else if (type === 'multi-from') {
+          const newSegs = [...multiCitySegments];
+          newSegs[index].from = selected;
+          setMultiCitySegments(newSegs);
+          setActiveMultiMenu(null);
+        } else if (type === 'multi-to') {
+          const newSegs = [...multiCitySegments];
+          newSegs[index].to = selected;
+          if (index + 1 < newSegs.length) {
+            newSegs[index + 1].from = selected;
+          }
+          setMultiCitySegments(newSegs);
+          setActiveMultiMenu(null);
+        }
+      }
+    }
+  };
+
   const formatDateMultiCity = (date) => {
     if (!date) return '';
     const d = new Date(date);
@@ -259,18 +309,19 @@ const FlightSearch = (props) => {
                           autoFocus
                           className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-brand-black/30 text-brand-black"
                           onChange={(e) => handleAirportSearch(e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, 'from')}
                         />
                       </div>
                     </div>
                     <div className="max-h-80 overflow-y-auto pb-2">
                       {filteredAirports.map((a, idx) => (
-                        <div key={`${a.iata}-${idx}`} className="mx-2 mb-0.5 p-3 flex items-center gap-3 hover:bg-brand-red/[0.05] cursor-pointer transition-all rounded-xl" onMouseDown={(e) => { e.preventDefault(); selectAirport('from', a); }}>
-                          <div className="w-10 h-8 bg-black/[0.04] rounded-lg flex items-center justify-center shrink-0">
-                            <span className="text-[10px] font-black text-brand-black/60 tracking-wider">{a.iata}</span>
+                        <div id={selectedIndex === idx ? "selected-airport-item" : ""} key={`${a.iata}-${idx}`} className={`mx-2 mb-0.5 p-3 flex items-center gap-3 cursor-pointer transition-all rounded-xl group ${selectedIndex === idx ? 'bg-brand-red/10' : 'hover:bg-brand-red/[0.05]'}`} onMouseDown={(e) => { e.preventDefault(); selectAirport('from', a); }} onMouseEnter={() => setSelectedIndex(idx)}>
+                          <div className={`w-10 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${selectedIndex === idx ? 'bg-brand-red/20' : 'bg-black/[0.04] group-hover:bg-brand-red/10'}`}>
+                            <span className={`text-[10px] font-black tracking-wider transition-colors ${selectedIndex === idx ? 'text-brand-red' : 'text-brand-black/60 group-hover:text-brand-red'}`}>{a.iata}</span>
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-bold text-brand-black truncate">{a.city}, {a.country}</span>
-                            <span className="text-[10px] font-semibold text-brand-black/40 truncate">{a.name}</span>
+                            <span className={`text-xs font-bold truncate transition-colors ${selectedIndex === idx ? 'text-brand-red' : 'text-brand-black group-hover:text-brand-red'}`}>{a.city}, {a.country}</span>
+                            <span className={`text-[10px] font-semibold truncate transition-colors ${selectedIndex === idx ? 'text-brand-red/80' : 'text-brand-black/40 group-hover:text-brand-red/60'}`}>{a.name}</span>
                           </div>
                         </div>
                       ))}
@@ -314,18 +365,19 @@ const FlightSearch = (props) => {
                           autoFocus
                           className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-brand-black/30 text-brand-black"
                           onChange={(e) => handleAirportSearch(e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, 'to')}
                         />
                       </div>
                     </div>
                     <div className="max-h-80 overflow-y-auto pb-2">
                       {filteredAirports.map((a, idx) => (
-                        <div key={`${a.iata}-${idx}`} className="mx-2 mb-0.5 p-3 flex items-center gap-3 hover:bg-brand-red/[0.05] cursor-pointer transition-all rounded-xl" onMouseDown={(e) => { e.preventDefault(); selectAirport('to', a); }}>
-                          <div className="w-10 h-8 bg-black/[0.04] rounded-lg flex items-center justify-center shrink-0">
-                            <span className="text-[10px] font-black text-brand-black/60 tracking-wider">{a.iata}</span>
+                        <div id={selectedIndex === idx ? "selected-airport-item" : ""} key={`${a.iata}-${idx}`} className={`mx-2 mb-0.5 p-3 flex items-center gap-3 cursor-pointer transition-all rounded-xl group ${selectedIndex === idx ? 'bg-brand-red/10' : 'hover:bg-brand-red/[0.05]'}`} onMouseDown={(e) => { e.preventDefault(); selectAirport('to', a); }} onMouseEnter={() => setSelectedIndex(idx)}>
+                          <div className={`w-10 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${selectedIndex === idx ? 'bg-brand-red/20' : 'bg-black/[0.04] group-hover:bg-brand-red/10'}`}>
+                            <span className={`text-[10px] font-black tracking-wider transition-colors ${selectedIndex === idx ? 'text-brand-red' : 'text-brand-black/60 group-hover:text-brand-red'}`}>{a.iata}</span>
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-bold text-brand-black truncate">{a.city}, {a.country}</span>
-                            <span className="text-[10px] font-semibold text-brand-black/40 truncate">{a.name}</span>
+                            <span className={`text-xs font-bold truncate transition-colors ${selectedIndex === idx ? 'text-brand-red' : 'text-brand-black group-hover:text-brand-red'}`}>{a.city}, {a.country}</span>
+                            <span className={`text-[10px] font-semibold truncate transition-colors ${selectedIndex === idx ? 'text-brand-red/80' : 'text-brand-black/40 group-hover:text-brand-red/60'}`}>{a.name}</span>
                           </div>
                         </div>
                       ))}
@@ -613,14 +665,17 @@ const FlightSearch = (props) => {
                                 autoFocus
                                 className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-brand-black/30 text-brand-black"
                                 onChange={(e) => handleAirportSearch(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, 'multi-from', idx)}
                               />
                             </div>
                           </div>
                           <div className="max-h-80 overflow-y-auto pb-2">
                             {filteredAirports.map((a, aIdx) => (
                               <div
+                                id={selectedIndex === aIdx ? "selected-airport-item" : ""}
                                 key={`${a.iata}-${aIdx}`}
-                                className="mx-2 mb-0.5 p-3 flex items-center gap-3 hover:bg-brand-red/[0.05] cursor-pointer transition-all rounded-xl group"
+                                className={`mx-2 mb-0.5 p-3 flex items-center gap-3 cursor-pointer transition-all rounded-xl group ${selectedIndex === aIdx ? 'bg-brand-red/10' : 'hover:bg-brand-red/[0.05]'}`}
+                                onMouseEnter={() => setSelectedIndex(aIdx)}
                                 onMouseDown={(e) => {
                                   e.preventDefault();
                                   const newSegs = [...multiCitySegments];
@@ -629,12 +684,12 @@ const FlightSearch = (props) => {
                                   setActiveMultiMenu(null);
                                 }}
                               >
-                                <div className="w-12 h-10 bg-black/[0.04] group-hover:bg-brand-red/10 rounded-lg flex items-center justify-center shrink-0 transition-colors">
-                                  <span className="text-[11px] font-black text-brand-black/60 group-hover:text-brand-red tracking-wider transition-colors">{a.iata}</span>
+                                <div className={`w-12 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${selectedIndex === aIdx ? 'bg-brand-red/20' : 'bg-black/[0.04] group-hover:bg-brand-red/10'}`}>
+                                  <span className={`text-[11px] font-black tracking-wider transition-colors ${selectedIndex === aIdx ? 'text-brand-red' : 'text-brand-black/60 group-hover:text-brand-red'}`}>{a.iata}</span>
                                 </div>
                                 <div className="flex flex-col min-w-0">
-                                  <span className="text-sm font-bold text-brand-black group-hover:text-brand-red transition-colors truncate">{a.city}, {a.country}</span>
-                                  <span className="text-[11px] font-semibold text-brand-black/40 group-hover:text-brand-red/60 transition-colors truncate">{a.name}</span>
+                                  <span className={`text-sm font-bold truncate transition-colors ${selectedIndex === aIdx ? 'text-brand-red' : 'text-brand-black group-hover:text-brand-red'}`}>{a.city}, {a.country}</span>
+                                  <span className={`text-[11px] font-semibold truncate transition-colors ${selectedIndex === aIdx ? 'text-brand-red/80' : 'text-brand-black/40 group-hover:text-brand-red/60'}`}>{a.name}</span>
                                 </div>
                               </div>
                             ))}
@@ -679,14 +734,17 @@ const FlightSearch = (props) => {
                                 autoFocus
                                 className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-brand-black/30 text-brand-black"
                                 onChange={(e) => handleAirportSearch(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, 'multi-to', idx)}
                               />
                             </div>
                           </div>
                           <div className="max-h-80 overflow-y-auto pb-2">
                             {filteredAirports.map((a, aIdx) => (
                               <div
+                                id={selectedIndex === aIdx ? "selected-airport-item" : ""}
                                 key={`${a.iata}-${aIdx}`}
-                                className="mx-2 mb-0.5 p-3 flex items-center gap-3 hover:bg-brand-red/[0.05] cursor-pointer transition-all rounded-xl group"
+                                className={`mx-2 mb-0.5 p-3 flex items-center gap-3 cursor-pointer transition-all rounded-xl group ${selectedIndex === aIdx ? 'bg-brand-red/10' : 'hover:bg-brand-red/[0.05]'}`}
+                                onMouseEnter={() => setSelectedIndex(aIdx)}
                                 onMouseDown={(e) => {
                                   e.preventDefault();
                                   const newSegs = [...multiCitySegments];
@@ -698,12 +756,12 @@ const FlightSearch = (props) => {
                                   setActiveMultiMenu(null);
                                 }}
                               >
-                                <div className="w-12 h-10 bg-black/[0.04] group-hover:bg-brand-red/10 rounded-lg flex items-center justify-center shrink-0 transition-colors">
-                                  <span className="text-[11px] font-black text-brand-black/60 group-hover:text-brand-red tracking-wider transition-colors">{a.iata}</span>
+                                <div className={`w-12 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${selectedIndex === aIdx ? 'bg-brand-red/20' : 'bg-black/[0.04] group-hover:bg-brand-red/10'}`}>
+                                  <span className={`text-[11px] font-black tracking-wider transition-colors ${selectedIndex === aIdx ? 'text-brand-red' : 'text-brand-black/60 group-hover:text-brand-red'}`}>{a.iata}</span>
                                 </div>
                                 <div className="flex flex-col min-w-0">
-                                  <span className="text-sm font-bold text-brand-black group-hover:text-brand-red transition-colors truncate">{a.city}, {a.country}</span>
-                                  <span className="text-[11px] font-semibold text-brand-black/40 group-hover:text-brand-red/60 transition-colors truncate">{a.name}</span>
+                                  <span className={`text-sm font-bold truncate transition-colors ${selectedIndex === aIdx ? 'text-brand-red' : 'text-brand-black group-hover:text-brand-red'}`}>{a.city}, {a.country}</span>
+                                  <span className={`text-[11px] font-semibold truncate transition-colors ${selectedIndex === aIdx ? 'text-brand-red/80' : 'text-brand-black/40 group-hover:text-brand-red/60'}`}>{a.name}</span>
                                 </div>
                               </div>
                             ))}
@@ -942,6 +1000,7 @@ const FlightSearch = (props) => {
                           autoFocus
                           className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-brand-black/30 text-brand-black"
                           onChange={(e) => handleAirportSearch(e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, 'from')}
                         />
                       </div>
                     </div>
@@ -953,19 +1012,21 @@ const FlightSearch = (props) => {
                     <div className="max-h-80 overflow-y-auto pb-2">
                       {filteredAirports.map((a, idx) => (
                         <div
+                          id={selectedIndex === idx ? "selected-airport-item" : ""}
                           key={`${a.iata}-${idx}`}
-                          className="mx-2 mb-0.5 p-3 flex items-center gap-3 hover:bg-brand-red/[0.05] cursor-pointer transition-all rounded-xl group"
+                          className={`mx-2 mb-0.5 p-3 flex items-center gap-3 cursor-pointer transition-all rounded-xl group ${selectedIndex === idx ? 'bg-brand-red/10' : 'hover:bg-brand-red/[0.05]'}`}
+                          onMouseEnter={() => setSelectedIndex(idx)}
                           onMouseDown={(e) => {
                             e.preventDefault();
                             selectAirport('from', a);
                           }}
                         >
-                          <div className="w-12 h-10 bg-black/[0.04] group-hover:bg-brand-red/10 rounded-lg flex items-center justify-center shrink-0 transition-colors">
-                            <span className="text-[11px] font-black text-brand-black/60 group-hover:text-brand-red tracking-wider transition-colors">{a.iata}</span>
+                          <div className={`w-12 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${selectedIndex === idx ? 'bg-brand-red/20' : 'bg-black/[0.04] group-hover:bg-brand-red/10'}`}>
+                            <span className={`text-[11px] font-black tracking-wider transition-colors ${selectedIndex === idx ? 'text-brand-red' : 'text-brand-black/60 group-hover:text-brand-red'}`}>{a.iata}</span>
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-bold text-brand-black group-hover:text-brand-red transition-colors truncate">{a.city}, {a.country}</span>
-                            <span className="text-[11px] font-semibold text-brand-black/40 group-hover:text-brand-red/60 transition-colors truncate">{a.name}</span>
+                            <span className={`text-sm font-bold truncate transition-colors ${selectedIndex === idx ? 'text-brand-red' : 'text-brand-black group-hover:text-brand-red'}`}>{a.city}, {a.country}</span>
+                            <span className={`text-[11px] font-semibold truncate transition-colors ${selectedIndex === idx ? 'text-brand-red/80' : 'text-brand-black/40 group-hover:text-brand-red/60'}`}>{a.name}</span>
                           </div>
                         </div>
                       ))}
@@ -1025,6 +1086,7 @@ const FlightSearch = (props) => {
                           autoFocus
                           className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-brand-black/30 text-brand-black"
                           onChange={(e) => handleAirportSearch(e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, 'to')}
                         />
                       </div>
                     </div>
@@ -1036,19 +1098,21 @@ const FlightSearch = (props) => {
                     <div className="max-h-80 overflow-y-auto pb-2">
                       {filteredAirports.map((a, idx) => (
                         <div
+                          id={selectedIndex === idx ? "selected-airport-item" : ""}
                           key={`${a.iata}-${idx}`}
-                          className="mx-2 mb-0.5 p-3 flex items-center gap-3 hover:bg-brand-red/[0.05] cursor-pointer transition-all rounded-xl group"
+                          className={`mx-2 mb-0.5 p-3 flex items-center gap-3 cursor-pointer transition-all rounded-xl group ${selectedIndex === idx ? 'bg-brand-red/10' : 'hover:bg-brand-red/[0.05]'}`}
+                          onMouseEnter={() => setSelectedIndex(idx)}
                           onMouseDown={(e) => {
                             e.preventDefault();
                             selectAirport('to', a);
                           }}
                         >
-                          <div className="w-12 h-10 bg-black/[0.04] group-hover:bg-brand-red/10 rounded-lg flex items-center justify-center shrink-0 transition-colors">
-                            <span className="text-[11px] font-black text-brand-black/60 group-hover:text-brand-red tracking-wider transition-colors">{a.iata}</span>
+                          <div className={`w-12 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${selectedIndex === idx ? 'bg-brand-red/20' : 'bg-black/[0.04] group-hover:bg-brand-red/10'}`}>
+                            <span className={`text-[11px] font-black tracking-wider transition-colors ${selectedIndex === idx ? 'text-brand-red' : 'text-brand-black/60 group-hover:text-brand-red'}`}>{a.iata}</span>
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-bold text-brand-black group-hover:text-brand-red transition-colors truncate">{a.city}, {a.country}</span>
-                            <span className="text-[11px] font-semibold text-brand-black/40 group-hover:text-brand-red/60 transition-colors truncate">{a.name}</span>
+                            <span className={`text-sm font-bold truncate transition-colors ${selectedIndex === idx ? 'text-brand-red' : 'text-brand-black group-hover:text-brand-red'}`}>{a.city}, {a.country}</span>
+                            <span className={`text-[11px] font-semibold truncate transition-colors ${selectedIndex === idx ? 'text-brand-red/80' : 'text-brand-black/40 group-hover:text-brand-red/60'}`}>{a.name}</span>
                           </div>
                         </div>
                       ))}
