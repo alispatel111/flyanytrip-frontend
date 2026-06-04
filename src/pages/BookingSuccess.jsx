@@ -2,6 +2,7 @@ import React, { useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, Download, Home, Share2, Plane, MapPin, Calendar, Clock, User, ShieldCheck, Printer, Mail, Phone, Luggage, MapPinned } from 'lucide-react';
 import { motion } from 'framer-motion';
+import api from '../services/api';
 
 const BookingSuccess = () => {
   const navigate = useNavigate();
@@ -67,6 +68,22 @@ const BookingSuccess = () => {
      if (!p) return '0';
      const num = typeof p === 'string' ? parseFloat(p.replace(/,/g, '')) : p;
      return isNaN(num) ? '0' : Math.ceil(num).toLocaleString('en-IN');
+  };
+
+  const handleDownloadInvoice = async () => {
+    try {
+      const response = await api.get(`/api/booking/invoice/${booking.bookingId}/download`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `FlyAnyTrip_Invoice_${pnr}.pdf`;
+      link.click();
+    } catch (error) {
+      console.error("Failed to download PDF:", error);
+      alert("Failed to download invoice PDF.");
+    }
   };
 
   return (
@@ -308,7 +325,7 @@ const BookingSuccess = () => {
               </div>
 
               {/* Sidebar Action */}
-              <button className="w-full h-16 bg-brand-black text-white rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 transition-all hover:bg-brand-red active:scale-95 shadow-xl">
+              <button onClick={handleDownloadInvoice} className="w-full h-16 bg-brand-black text-white rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 transition-all hover:bg-brand-red active:scale-95 shadow-xl">
                  <Download size={20} /> Download Ticket PDF
               </button>
               <button 
