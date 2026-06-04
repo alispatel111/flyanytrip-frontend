@@ -9,7 +9,8 @@ const Payment = () => {
   const location = useLocation();
   const { flight, grandTotal, travellers, ssrTotal = 0 } = location.state || {};
   
-  const [method, setMethod] = useState('card');
+  const [method, setMethod] = useState('razorpay');
+  const [demoStatus, setDemoStatus] = useState('success');
   const [isProcessing, setIsProcessing] = useState(false);
 
   if (!flight) {
@@ -23,59 +24,210 @@ const Payment = () => {
     );
   }
 
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePay = async () => {
     setIsProcessing(true);
     try {
-      const bookingRes = await api.post('/api/booking/confirm', {
-        isLCC: flight.raw?.IsLCC || flight.isLCC,
-        traceId: flight.traceId,
-        resultIndex: flight.resultIndex,
-        passengers: travellers.map(t => {
-          const pax = {
-            Title: t.title || 'Mr',
-            FirstName: t.firstName,
-            LastName: t.lastName,
-            PaxType: t.type === 'adult' ? 1 : (t.type === 'child' ? 2 : 3),
-            Gender: t.gender === 'Male' ? 1 : 2,
-            DateOfBirth: t.dob || (t.type === 'adult' ? "1990-01-01" : (t.type === 'child' ? "2015-01-01" : "2025-01-01"))
-          };
-          if (t.passportNumber) pax.PassportNo = t.passportNumber;
-          if (t.passportExpiry) pax.PassportExpiry = t.passportExpiry;
-          return pax;
-        }),
-        contactDetails: { Email: travellers[0].email, ContactNo: travellers[0].phone },
-        paymentData: { method, status: 'success', mockPayment: true },
-        flightSnapshot: flight,
-        totalAmount: grandTotal,
-      });
-
-      if (bookingRes.data.success) {
-        const dbBooking = bookingRes.data.data.booking;
+      if (method === 'demo') {
+        if (demoStatus === 'failure') {
+          // Redirect to booking failed immediately as requested
+          navigate('/booking-failed', { 
+            state: { error: "Demo transaction failed by choice. Try again or choose a successful flow." } 
+          });
+          return;
+        }
         
-        // Format booking data for the success page to consume
-        const mockBookingForUI = {
-          bookingId: dbBooking.booking_id,
-          pnr: bookingRes.data.data.flightBooking?.pnr || 'PENDING',
-          status: dbBooking.status,
-          passengers: travellers.map(t => ({ 
-            Title: t.title, FirstName: t.firstName, LastName: t.lastName,
-            email: travellers[0].email, phone: travellers[0].phone
-          }))
+        // Success path for simulator
+        const bookingRes = await api.post('/api/booking/confirm', {
+          isLCC: flight.raw?.IsLCC || flight.isLCC,
+          traceId: flight.traceId,
+          resultIndex: flight.resultIndex,
+          passengers: travellers.map(t => {
+            const pax = {
+              Title: t.title || 'Mr',
+              FirstName: t.firstName,
+              LastName: t.lastName,
+              PaxType: t.type === 'adult' ? 1 : (t.type === 'child' ? 2 : 3),
+              Gender: t.gender === 'Male' ? 1 : 2,
+              DateOfBirth: t.dob || (t.type === 'adult' ? "1990-01-01" : (t.type === 'child' ? "2015-01-01" : "2025-01-01"))
+            };
+            if (t.passportNumber) pax.PassportNo = t.passportNumber;
+            if (t.passportExpiry) pax.PassportExpiry = t.passportExpiry;
+            return pax;
+          }),
+          contactDetails: { Email: travellers[0].email, ContactNo: travellers[0].phone },
+          paymentData: { method: 'demo_simulator', status: 'success', mockPayment: true },
+          flightSnapshot: flight,
+          totalAmount: grandTotal,
+        });
+
+        if (bookingRes.data.success) {
+          const dbBooking = bookingRes.data.data.booking;
+          const mockBookingForUI = {
+            bookingId: dbBooking.booking_id,
+            pnr: bookingRes.data.data.flightBooking?.pnr || 'PENDING',
+            status: dbBooking.status,
+            passengers: travellers.map(t => ({ 
+              Title: t.title, FirstName: t.firstName, LastName: t.lastName,
+              email: travellers[0].email, phone: travellers[0].phone
+            }))
+          };
+
+          const finalData = { booking: mockBookingForUI, flight: flight };
+          sessionStorage.setItem('lastBooking', JSON.stringify(finalData));
+          
+          const shortId = btoa(dbBooking.booking_id).substring(0, 12);
+          navigate(`/booking-success?id=${shortId}`);
+        } else {
+          alert("Booking failed: " + bookingRes.data.message);
+        }
+      } else {
+        // Razorpay Payment Flow
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          alert("Failed to load Razorpay SDK. Check your internet connection.");
+          return;
+        }
+
+        // 1. Create order and fetch configuration from server
+        const [orderRes, configRes] = await Promise.all([
+          api.post('/api/payment/create-order', {
+            amount: grandTotal,
+            currency: 'INR'
+          }),
+          api.get('/api/payment/config').catch(err => {
+            console.warn("Could not fetch config from server, falling back to client defaults:", err);
+            return { data: { data: { keyId: "rzp_test_RH0I6LBnmc0Ziz" } } };
+          })
+        ]);
+
+        if (!orderRes.data.success) {
+          alert("Failed to initiate transaction with Razorpay. Try again.");
+          return;
+        }
+
+        const orderData = orderRes.data.data;
+        const razorpayKey = configRes.data?.data?.keyId || "rzp_test_RH0I6LBnmc0Ziz";
+
+        // 2. Open Razorpay checkout
+        const options = {
+          key: razorpayKey,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: "FlyAnyTrip",
+          description: "Secure Flight Booking Payment",
+          order_id: orderData.orderId,
+          handler: async function (response) {
+            setIsProcessing(true);
+            try {
+              // 3. Verify Payment
+              const verifyRes = await api.post('/api/payment/verify', {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              });
+
+              if (verifyRes.data.success) {
+                // 4. Confirm Booking
+                const bookingRes = await api.post('/api/booking/confirm', {
+                  isLCC: flight.raw?.IsLCC || flight.isLCC,
+                  traceId: flight.traceId,
+                  resultIndex: flight.resultIndex,
+                  passengers: travellers.map(t => {
+                    const pax = {
+                      Title: t.title || 'Mr',
+                      FirstName: t.firstName,
+                      LastName: t.lastName,
+                      PaxType: t.type === 'adult' ? 1 : (t.type === 'child' ? 2 : 3),
+                      Gender: t.gender === 'Male' ? 1 : 2,
+                      DateOfBirth: t.dob || (t.type === 'adult' ? "1990-01-01" : (t.type === 'child' ? "2015-01-01" : "2025-01-01"))
+                    };
+                    if (t.passportNumber) pax.PassportNo = t.passportNumber;
+                    if (t.passportExpiry) pax.PassportExpiry = t.passportExpiry;
+                    return pax;
+                  }),
+                  contactDetails: { Email: travellers[0].email, ContactNo: travellers[0].phone },
+                  paymentData: { 
+                    method: 'razorpay', 
+                    status: 'success',
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id
+                  },
+                  flightSnapshot: flight,
+                  totalAmount: grandTotal,
+                });
+
+                if (bookingRes.data.success) {
+                  const dbBooking = bookingRes.data.data.booking;
+                  const mockBookingForUI = {
+                    bookingId: dbBooking.booking_id,
+                    pnr: bookingRes.data.data.flightBooking?.pnr || 'PENDING',
+                    status: dbBooking.status,
+                    passengers: travellers.map(t => ({ 
+                      Title: t.title, FirstName: t.firstName, LastName: t.lastName,
+                      email: travellers[0].email, phone: travellers[0].phone
+                    }))
+                  };
+
+                  const finalData = { booking: mockBookingForUI, flight: flight };
+                  sessionStorage.setItem('lastBooking', JSON.stringify(finalData));
+                  
+                  const shortId = btoa(dbBooking.booking_id).substring(0, 12);
+                  navigate(`/booking-success?id=${shortId}`);
+                } else {
+                  navigate('/booking-failed', { state: { error: bookingRes.data.message || 'Booking confirmation failed' } });
+                }
+              } else {
+                navigate('/booking-failed', { state: { error: 'Razorpay signature verification failed' } });
+              }
+            } catch (err) {
+              console.error("Razorpay verification/booking error:", err);
+              navigate('/booking-failed', { state: { error: err.response?.data?.message || err.message } });
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+          prefill: {
+            name: `${travellers[0]?.firstName || ''} ${travellers[0]?.lastName || ''}`,
+            email: travellers[0]?.email || 'customer@flyanytrip.com',
+            contact: travellers[0]?.phone || '9999999999'
+          },
+          theme: {
+            color: "#FF3366"
+          },
+          modal: {
+            ondismiss: function () {
+              setIsProcessing(false);
+            }
+          }
         };
 
-        const finalData = { booking: mockBookingForUI, flight: flight };
-        sessionStorage.setItem('lastBooking', JSON.stringify(finalData));
-        
-        const shortId = btoa(dbBooking.booking_id).substring(0, 12);
-        navigate(`/booking-success?id=${shortId}`);
-      } else {
-        alert("Booking failed: " + bookingRes.data.message);
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+          navigate('/booking-failed', { state: { error: response.error?.description || 'Razorpay payment failed' } });
+        });
+        rzp.open();
       }
     } catch (error) {
       console.error("Booking error:", error);
       alert("Error confirming booking: " + (error.response?.data?.message || error.message));
     } finally {
-      setIsProcessing(false);
+      if (method !== 'razorpay') {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -103,69 +255,54 @@ const Payment = () => {
                  <CreditCard size={16} className="text-brand-red" /> Select Payment Method
               </h3>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                 <button 
-                  onClick={() => setMethod('card')}
-                  className={`py-4 flex flex-col items-center gap-2 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${method === 'card' ? 'border-brand-red text-brand-red bg-brand-red/5' : 'border-black/5 text-brand-black/40 hover:border-black/20'}`}
+                  onClick={() => setMethod('razorpay')}
+                  className={`py-4 flex flex-col items-center gap-2 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${method === 'razorpay' ? 'border-brand-red text-brand-red bg-brand-red/5' : 'border-black/5 text-brand-black/40 hover:border-black/20'}`}
                 >
-                  <CreditCard size={20} /> Credit/Debit Card
+                  <CreditCard size={20} /> Razorpay (Test Mode)
                 </button>
                 <button 
-                  onClick={() => setMethod('upi')}
-                  className={`py-4 flex flex-col items-center gap-2 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${method === 'upi' ? 'border-brand-red text-brand-red bg-brand-red/5' : 'border-black/5 text-brand-black/40 hover:border-black/20'}`}
+                  onClick={() => setMethod('demo')}
+                  className={`py-4 flex flex-col items-center gap-2 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${method === 'demo' ? 'border-brand-red text-brand-red bg-brand-red/5' : 'border-black/5 text-brand-black/40 hover:border-black/20'}`}
                 >
-                  <Wallet size={20} /> UPI / VPA
-                </button>
-                <button 
-                  onClick={() => setMethod('net')}
-                  className={`py-4 flex flex-col items-center gap-2 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${method === 'net' ? 'border-brand-red text-brand-red bg-brand-red/5' : 'border-black/5 text-brand-black/40 hover:border-black/20'}`}
-                >
-                  <Building size={20} /> Net Banking
+                  <Wallet size={20} /> Demo Simulator
                 </button>
               </div>
 
               <div className="bg-black/[0.02] p-6 rounded-2xl border border-black/5 mb-6">
-                {method === 'card' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[9px] font-black text-brand-black/40 uppercase tracking-widest mb-1.5">Card Number</label>
-                        <input type="text" placeholder="0000 0000 0000 0000" className="w-full bg-white border border-black/10 rounded-xl py-3 px-4 text-xs font-black text-brand-black focus:outline-none focus:border-brand-red transition-all" />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-black text-brand-black/40 uppercase tracking-widest mb-1.5">Name on Card</label>
-                        <input type="text" placeholder="HOLDER NAME" className="w-full bg-white border border-black/10 rounded-xl py-3 px-4 text-xs font-black text-brand-black focus:outline-none focus:border-brand-red transition-all uppercase" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[9px] font-black text-brand-black/40 uppercase tracking-widest mb-1.5">Expiry Date</label>
-                        <input type="text" placeholder="MM/YY" className="w-full bg-white border border-black/10 rounded-xl py-3 px-4 text-xs font-black text-brand-black focus:outline-none focus:border-brand-red transition-all" />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-black text-brand-black/40 uppercase tracking-widest mb-1.5">CVV Code</label>
-                        <input type="password" placeholder="***" className="w-full bg-white border border-black/10 rounded-xl py-3 px-4 text-xs font-black text-brand-black focus:outline-none focus:border-brand-red transition-all" />
-                      </div>
-                    </div>
+                {method === 'razorpay' && (
+                  <div className="py-8 text-center">
+                     <p className="text-[11px] font-black text-brand-black/60 uppercase tracking-widest mb-2">Razorpay Sandbox Gateway</p>
+                     <p className="text-xs text-brand-black/40 max-w-md mx-auto mb-6">
+                        Pay securely using Razorpay. Supports Cards, Net Banking, UPI/VPA, and popular Mobile Wallets in test environment.
+                     </p>
+                     <div className="inline-flex items-center gap-2 bg-brand-red/5 text-brand-red text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-wider">
+                        Active Sandbox Credentials Loaded
+                     </div>
                   </div>
                 )}
 
-                {method === 'upi' && (
+                {method === 'demo' && (
                   <div className="py-4 text-center">
-                    <p className="text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-4">Enter your VPA / UPI ID</p>
-                    <input type="text" placeholder="username@bank" className="w-full max-w-sm bg-white border border-black/10 rounded-xl py-4 px-4 text-center text-sm font-black text-brand-black focus:outline-none focus:border-brand-red mx-auto block" />
-                  </div>
-                )}
-
-                {method === 'net' && (
-                  <div className="py-4 text-center">
-                    <p className="text-[10px] font-black text-brand-black/40 uppercase tracking-widest mb-4">Select your bank</p>
-                    <select className="w-full max-w-sm bg-white border border-black/10 rounded-xl py-4 px-4 text-sm font-black text-brand-black focus:outline-none focus:border-brand-red mx-auto block appearance-none text-center">
-                      <option>HDFC Bank</option>
-                      <option>ICICI Bank</option>
-                      <option>State Bank of India</option>
-                      <option>Axis Bank</option>
-                    </select>
+                    <p className="text-[10px] font-black text-brand-black/50 uppercase tracking-widest mb-4">Demo Payment Simulator Status</p>
+                    <div className="flex justify-center gap-4 max-w-sm mx-auto mb-4">
+                       <button
+                         onClick={() => setDemoStatus('success')}
+                         className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition-all ${demoStatus === 'success' ? 'bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/25' : 'bg-white border-black/5 text-brand-black/40 hover:border-black/10'}`}
+                       >
+                          Success Flow
+                       </button>
+                       <button
+                         onClick={() => setDemoStatus('failure')}
+                         className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition-all ${demoStatus === 'failure' ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/25' : 'bg-white border-black/5 text-brand-black/40 hover:border-black/10'}`}
+                       >
+                          Failure Flow
+                       </button>
+                    </div>
+                    <p className="text-[9px] text-brand-black/30 font-bold uppercase tracking-wider">
+                       Based on selection, the application will redirect to the corresponding success/failure page.
+                    </p>
                   </div>
                 )}
               </div>
