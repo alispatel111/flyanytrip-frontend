@@ -148,6 +148,7 @@ const FinalBookingReview = () => {
                 PassportNo: t.passportNo,
                 PassportExpiry: t.passportExpiry
               })),
+              ssrSelections: ssrSelections, // Added missing ssrSelections
               contactDetails: {
                 Email: travellers[0].email,
                 ContactNo: travellers[0].phone // Changed from Phone to ContactNo to match backend expectation
