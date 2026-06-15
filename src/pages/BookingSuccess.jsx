@@ -44,7 +44,7 @@ const BookingSuccess = () => {
   }
 
   const pnr = booking.pnr || "FL-PENDING";
-  const segments = flight.segments || [];
+  const segments = flight.segments || flight.raw?.Segments?.[0] || [];
   
   const formatDate = (dateStr) => {
      if (!dateStr) return '';
@@ -108,14 +108,14 @@ const BookingSuccess = () => {
                  </p>
               </div>
            </div>
-           <div className="flex items-center gap-2">
+           {/* <div className="flex items-center gap-2">
               <button className="w-10 h-10 rounded-xl bg-black/[0.03] flex items-center justify-center text-brand-black/60 hover:bg-brand-black hover:text-white transition-all">
                  <Share2 size={18} />
               </button>
               <button onClick={() => window.print()} className="w-10 h-10 rounded-xl bg-black/[0.03] flex items-center justify-center text-brand-black/60 hover:bg-brand-black hover:text-white transition-all">
                  <Printer size={18} />
               </button>
-           </div>
+           </div> */}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
