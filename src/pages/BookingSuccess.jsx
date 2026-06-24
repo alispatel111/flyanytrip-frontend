@@ -21,7 +21,7 @@ const BookingSuccess = () => {
     return location.state;
   }, [location]);
 
-  const { booking, flight } = bookingData || {};
+  const { booking, flight, pricingDetails } = bookingData || {};
 
   // Scroll to top on mount
   useEffect(() => {
@@ -306,17 +306,51 @@ const BookingSuccess = () => {
               <div className="bg-white rounded-[2.5rem] p-8 border border-black/5 shadow-xl shadow-black/5">
                  <h3 className="text-[10px] font-black text-brand-black uppercase tracking-widest mb-6">Payment Summary</h3>
                  <div className="space-y-4">
-                    <div className="flex justify-between items-center text-xs font-bold text-brand-black/40">
-                       <span>Total Fare Paid</span>
-                       <span className="text-brand-black font-black">₹{getDisplayPrice(flight.price)}</span>
+                    <div className="flex justify-between items-center text-xs font-bold text-brand-black/60">
+                       <span>Base Fare</span>
+                       <span className="text-brand-black font-black">₹{getDisplayPrice(pricingDetails?.baseFare || Math.round((booking?.totalAmount || flight?.price || 0) * 0.7))}</span>
                     </div>
-                    <div className="flex justify-between items-center text-xs font-bold text-brand-black/40">
+                    <div className="flex justify-between items-center text-xs font-bold text-brand-black/60">
+                       <span>Taxes & Airline Fees</span>
+                       <span className="text-brand-black font-black">₹{getDisplayPrice(pricingDetails?.tax || Math.round((booking?.totalAmount || flight?.price || 0) * 0.3))}</span>
+                    </div>
+                    {pricingDetails?.ssrMealTotal > 0 && (
+                       <div className="flex justify-between items-center text-xs font-bold text-brand-black/60">
+                          <span>Meal Add-ons</span>
+                          <span className="text-brand-black font-black">₹{getDisplayPrice(pricingDetails.ssrMealTotal)}</span>
+                       </div>
+                    )}
+                    {pricingDetails?.ssrBagTotal > 0 && (
+                       <div className="flex justify-between items-center text-xs font-bold text-brand-black/60">
+                          <span>Extra Baggage</span>
+                          <span className="text-brand-black font-black">₹{getDisplayPrice(pricingDetails.ssrBagTotal)}</span>
+                       </div>
+                    )}
+                    {pricingDetails?.ssrSeatTotal > 0 && (
+                       <div className="flex justify-between items-center text-xs font-bold text-brand-black/60">
+                          <span>Seat Selection</span>
+                          <span className="text-brand-black font-black">₹{getDisplayPrice(pricingDetails.ssrSeatTotal)}</span>
+                       </div>
+                    )}
+                    {pricingDetails?.ssrTotal > 0 && !pricingDetails.ssrMealTotal && !pricingDetails.ssrBagTotal && !pricingDetails.ssrSeatTotal && (
+                       <div className="flex justify-between items-center text-xs font-bold text-brand-black/60">
+                          <span>Add-ons</span>
+                          <span className="text-brand-black font-black">₹{getDisplayPrice(pricingDetails.ssrTotal)}</span>
+                       </div>
+                    )}
+                    <div className="flex justify-between items-center text-xs font-bold text-brand-black/60">
                        <span>Convenience Fee</span>
-                       <span className="text-green-600 font-black">FREE</span>
+                       <span className="text-green-600 font-black">{pricingDetails?.convenienceFee > 0 ? `₹${getDisplayPrice(pricingDetails.convenienceFee)}` : 'FREE'}</span>
                     </div>
+                    {pricingDetails?.couponDiscount > 0 && (
+                       <div className="flex justify-between items-center text-xs font-bold text-green-600">
+                          <span>Discounts</span>
+                          <span className="font-black">- ₹{getDisplayPrice(pricingDetails.couponDiscount)}</span>
+                       </div>
+                    )}
                     <div className="pt-5 border-t border-black/5">
                        <div className="text-[10px] font-black text-brand-black/30 uppercase tracking-widest mb-1">Grand Total</div>
-                       <div className="text-4xl font-black text-brand-black tracking-tighter leading-none">₹{getDisplayPrice(flight.price)}</div>
+                       <div className="text-4xl font-black text-brand-black tracking-tighter leading-none">₹{getDisplayPrice(booking?.totalAmount || pricingDetails?.grandTotal || flight?.price)}</div>
                     </div>
                     <div className="flex items-center gap-2 text-[9px] font-black text-green-600 bg-green-50 p-4 rounded-2xl mt-4 border border-green-100">
                        <ShieldCheck size={14} /> TRANSACTION SECURE & VERIFIED

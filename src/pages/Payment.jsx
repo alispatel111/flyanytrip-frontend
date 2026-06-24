@@ -7,7 +7,14 @@ import api from '../services/api';
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { flight, grandTotal, travellers, ssrTotal = 0 } = location.state || {};
+  const { 
+    flight, grandTotal, travellers, ssrTotal = 0, selectedSeats = [], selectedMeals = [], selectedBaggage = [],
+    baseFare = 0, tax = 0, convenienceFee = 0, couponDiscount = 0
+  } = location.state || {};
+
+  const ssrSeatTotal = selectedSeats.reduce((acc, s) => acc + (s?.price || 0), 0);
+  const ssrMealTotal = selectedMeals.reduce((acc, m) => acc + (m?.price || 0), 0);
+  const ssrBagTotal = selectedBaggage.reduce((acc, b) => acc + (b?.price || 0), 0);
 
   const [method, setMethod] = useState('razorpay');
   const [demoStatus, setDemoStatus] = useState('success');
@@ -72,21 +79,27 @@ const Payment = () => {
           paymentData: { method: 'demo_simulator', status: 'success', mockPayment: true },
           flightSnapshot: flight,
           totalAmount: grandTotal,
+          ssrSelections: { seats: selectedSeats, meals: selectedMeals, baggage: selectedBaggage },
         });
 
         if (bookingRes.data.success) {
           const dbBooking = bookingRes.data.data.booking;
           const mockBookingForUI = {
             bookingId: dbBooking.booking_id,
-            pnr: bookingRes.data.data.flightBooking?.pnr || 'PENDING',
+            pnr: bookingRes.data.data.flightBooking?.pnr || bookingRes.data.data.pnr || 'PENDING',
             status: dbBooking.status,
+            totalAmount: bookingRes.data.data.totalAmount || grandTotal,
             passengers: travellers.map(t => ({
               Title: t.title, FirstName: t.firstName, LastName: t.lastName,
               email: travellers[0].email, phone: travellers[0].phone
             }))
           };
 
-          const finalData = { booking: mockBookingForUI, flight: flight };
+          const finalData = { 
+            booking: mockBookingForUI, 
+            flight: flight,
+            pricingDetails: { baseFare, tax, ssrTotal, ssrSeatTotal, ssrMealTotal, ssrBagTotal, convenienceFee, couponDiscount, grandTotal }
+          };
           sessionStorage.setItem('lastBooking', JSON.stringify(finalData));
 
           const shortId = btoa(dbBooking.booking_id).substring(0, 12);
@@ -168,21 +181,27 @@ const Payment = () => {
                   },
                   flightSnapshot: flight,
                   totalAmount: grandTotal,
+                  ssrSelections: { seats: selectedSeats, meals: selectedMeals, baggage: selectedBaggage },
                 });
 
                 if (bookingRes.data.success) {
                   const dbBooking = bookingRes.data.data.booking;
                   const mockBookingForUI = {
                     bookingId: dbBooking.booking_id,
-                    pnr: bookingRes.data.data.flightBooking?.pnr || 'PENDING',
+                    pnr: bookingRes.data.data.flightBooking?.pnr || bookingRes.data.data.pnr || 'PENDING',
                     status: dbBooking.status,
+                    totalAmount: bookingRes.data.data.totalAmount || grandTotal,
                     passengers: travellers.map(t => ({
                       Title: t.title, FirstName: t.firstName, LastName: t.lastName,
                       email: travellers[0].email, phone: travellers[0].phone
                     }))
                   };
 
-                  const finalData = { booking: mockBookingForUI, flight: flight };
+                  const finalData = { 
+                    booking: mockBookingForUI, 
+                    flight: flight,
+                    pricingDetails: { baseFare, tax, ssrTotal, ssrSeatTotal, ssrMealTotal, ssrBagTotal, convenienceFee, couponDiscount, grandTotal }
+                  };
                   sessionStorage.setItem('lastBooking', JSON.stringify(finalData));
 
                   const shortId = btoa(dbBooking.booking_id).substring(0, 12);
