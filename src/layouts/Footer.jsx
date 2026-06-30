@@ -8,7 +8,6 @@
  */
 
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Globe2, Instagram } from 'lucide-react';
 
 const Footer = () => (
@@ -37,24 +36,24 @@ const Footer = () => (
         </div>
         <div className="flex flex-col gap-3">
           <h4 className="text-white font-bold text-xs uppercase tracking-widest mb-1">Company</h4>
-          <Link to="/about-us" className="text-white/30 text-sm hover:text-white transition-colors">About Us</Link>
-          <Link to="/careers" className="text-white/30 text-sm hover:text-white transition-colors">Careers</Link>
-          <Link to="/press" className="text-white/30 text-sm hover:text-white transition-colors">Press</Link>
-          <Link to="/trust-and-safety" className="text-white/30 text-sm hover:text-white transition-colors">Trust & Safety</Link>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">About Us</a>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Careers</a>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Press</a>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Trust & Safety</a>
         </div>
         <div className="flex flex-col gap-3">
           <h4 className="text-white font-bold text-xs uppercase tracking-widest mb-1">Services</h4>
-          <Link to="/flights" className="text-white/30 text-sm hover:text-white transition-colors">Flight Booking</Link>
-          <Link to="/tours" className="text-white/30 text-sm hover:text-white transition-colors">Curated Tours</Link>
-          <Link to="/visa-services" className="text-white/30 text-sm hover:text-white transition-colors">Visa Services</Link>
-          <Link to="/corporate-travel" className="text-white/30 text-sm hover:text-white transition-colors">Corporate Travel</Link>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Flight Booking</a>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Curated Tours</a>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Visa Services</a>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Corporate Travel</a>
         </div>
         <div className="flex flex-col gap-3">
           <h4 className="text-white font-bold text-xs uppercase tracking-widest mb-1">Support</h4>
-          <Link to="/help-center" className="text-white/30 text-sm hover:text-white transition-colors">Help Center</Link>
-          <Link to="/terms" className="text-white/30 text-sm hover:text-white transition-colors">Terms of Service</Link>
-          <Link to="/privacy-policy" className="text-white/30 text-sm hover:text-white transition-colors">Privacy Policy</Link>
-          <Link to="/cookie-policy" className="text-white/30 text-sm hover:text-white transition-colors">Cookie Policy</Link>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Help Center</a>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Terms of Service</a>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Privacy Policy</a>
+          <a href="#" className="text-white/30 text-sm hover:text-white transition-colors">Cookie Policy</a>
         </div>
       </div>
       <div className="flex flex-col md:flex-row justify-between items-center gap-3 text-white/20 text-xs font-bold uppercase tracking-wider">

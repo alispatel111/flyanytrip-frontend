@@ -40,17 +40,10 @@ import Offers from '../pages/Offers';
 import PopularDestinations from '../pages/PopularDestinations';
 import Blog from '../pages/Blog';
 import AboutUs from '../pages/AboutUs';
-import Careers from '../pages/Careers';
-import Press from '../pages/Press';
-import TrustSafety from '../pages/TrustSafety';
-import VisaServices from '../pages/VisaServices';
-import CorporateTravel from '../pages/CorporateTravel';
-import HelpCenter from '../pages/HelpCenter';
 import ContactUs from '../pages/ContactUs';
 import FAQ from '../pages/FAQ';
 import Terms from '../pages/Terms';
 import PrivacyPolicy from '../pages/PrivacyPolicy';
-import CookiePolicy from '../pages/CookiePolicy';
 import RefundPolicy from '../pages/RefundPolicy';
 
 // Auth Pages
@@ -111,17 +104,10 @@ const AppRoutes = () => {
       <Route path="/destinations" element={<PopularDestinations />} />
       <Route path="/blog" element={<Blog />} />
       <Route path="/about-us" element={<AboutUs />} />
-      <Route path="/careers" element={<Careers />} />
-      <Route path="/press" element={<Press />} />
-      <Route path="/trust-and-safety" element={<TrustSafety />} />
-      <Route path="/visa-services" element={<VisaServices />} />
-      <Route path="/corporate-travel" element={<CorporateTravel />} />
-      <Route path="/help-center" element={<HelpCenter />} />
       <Route path="/contact-us" element={<ContactUs />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-      <Route path="/cookie-policy" element={<CookiePolicy />} />
       <Route path="/refund-policy" element={<RefundPolicy />} />
 
       {/* Auth Routes */}

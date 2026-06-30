@@ -181,7 +181,7 @@ const HotelSearch = ({ initialValues } = {}) => {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
-                  className="absolute top-full left-0 right-0 mt-2 bg-white border border-black/10 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                  className="absolute top-full left-0 right-0 mt-2 bg-white border border-black/10 rounded-2xl shadow-2xl z-[200] overflow-hidden"
                 >
                   {loadingSuggestions ? (
                     <div className="px-4 py-3 text-sm text-black/40 flex items-center gap-2">
@@ -278,7 +278,7 @@ const HotelSearch = ({ initialValues } = {}) => {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
-                  className="absolute top-full left-0 right-0 mt-2 bg-white border border-black/10 rounded-2xl shadow-2xl z-50 p-4 space-y-4"
+                  className="absolute top-full left-0 right-0 mt-2 bg-white border border-black/10 rounded-2xl shadow-2xl z-[200] p-4 space-y-4"
                 >
                   {[
                     { label: 'Rooms', sub: 'Number of rooms', value: rooms, set: setRooms, min: 1, max: 8 },

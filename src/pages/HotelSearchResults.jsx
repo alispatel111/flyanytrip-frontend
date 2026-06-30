@@ -36,6 +36,7 @@ const HotelSearchResults = () => {
   // UI state
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchBar, setShowSearchBar] = useState(false);
+  const [searchPanelExpanded, setSearchPanelExpanded] = useState(false);
 
   // Filter state — prices always in INR after conversion
   const [starFilter, setStarFilter] = useState([]);
@@ -68,8 +69,23 @@ const HotelSearchResults = () => {
         const hotelList = res.data?.data?.responseData?.HotelLists?.HotelList || [];
         setHotels(hotelList);
 
-        // Detect currency
-        const detected = detectCurrency(res.data?.data?.responseData) || detectCurrency(hotelList);
+        // Detect currency — pass the FULL data object so detectCurrency
+        // can find responseData.currency or responseData.HotelLists.HotelList[0].Currency
+        const detectedFromResponse = detectCurrency(res.data?.data);
+        const detectedFromList = detectCurrency(hotelList);
+        // Adivaha commonly returns USD unless you're on an INR account.
+        // Default to USD (not INR) so prices get properly converted.
+        const detected = detectedFromResponse || detectedFromList || 'USD';
+
+        console.log('[Hotel Pricing Debug]', {
+          detectedFromResponse,
+          detectedFromList,
+          finalCurrency: detected,
+          sampleLowRate: hotelList[0]?.LowRate,
+          sampleName: hotelList[0]?.Name,
+          fullResponse: res.data?.data,
+        });
+
         setApiCurrency(detected);
 
         // Set slider max to highest INR-converted price
@@ -157,7 +173,12 @@ const HotelSearchResults = () => {
           <div className="flex items-center gap-3">
             {/* Modify Search */}
             <button
-              onClick={() => { setShowSearchBar(v => !v); setShowFilters(false); }}
+              onClick={() => {
+                setShowSearchBar(v => !v);
+                setShowFilters(false);
+                // Reset expanded state when toggling closed
+                if (showSearchBar) setSearchPanelExpanded(false);
+              }}
               className={`flex items-center gap-2 border px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${showSearchBar ? 'border-brand-red text-brand-red bg-brand-red/5' : 'border-black/15 text-brand-black hover:border-brand-red hover:text-brand-red'}`}
             >
               <Search size={14} />
@@ -192,7 +213,7 @@ const HotelSearchResults = () => {
           </div>
         </div>
 
-        {/* ── Modify Search Panel (inside sticky header) ── */}
+        {/* ── Modify Search Panel ── */}
         <AnimatePresence>
           {showSearchBar && (
             <motion.div
@@ -200,7 +221,17 @@ const HotelSearchResults = () => {
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="overflow-hidden border-t border-black/5 bg-white"
+              // Switch to overflow-visible ONLY when fully open so inner
+              // dropdowns (suggestions, guest picker) are not clipped.
+              // During exit animation keep overflow-hidden so height collapses.
+              onAnimationComplete={(def) => {
+                if (def?.height === 'auto') setSearchPanelExpanded(true);
+                else setSearchPanelExpanded(false);
+              }}
+              style={{
+                overflow: searchPanelExpanded ? 'visible' : 'hidden',
+              }}
+              className="border-t border-black/5 bg-white"
             >
               <div className="max-w-7xl mx-auto px-4 py-5">
                 <HotelSearch
@@ -300,6 +331,7 @@ const HotelSearchResults = () => {
 
       {/* ── Main Content ── */}
       <div className="max-w-7xl mx-auto px-4 py-6">
+
 
         {loading && (
           <div className="flex flex-col items-center justify-center py-32 gap-4">

@@ -17,7 +17,7 @@ const HotelBookingSuccess = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { bookingData, hotelSnapshot, holderName, holderEmail, holderPhone, totalPrice } = location.state || {};
+  const { bookingData, hotelSnapshot, holderName, holderEmail, holderPhone, totalPriceINR } = location.state || {};
 
   // Guard
   if (!bookingData) {
@@ -88,6 +88,24 @@ const HotelBookingSuccess = () => {
       setCancelError(err.response?.data?.message || 'Cancellation failed. Please contact support.');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!localBookingId) return;
+    try {
+      const res = await api.get(`/api/hotels/invoice/${localBookingId}/download`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Hotel_Invoice_${localBookingId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download Invoice Error:', err);
+      alert('Failed to download invoice. Please try again later.');
     }
   };
 
@@ -232,7 +250,7 @@ const HotelBookingSuccess = () => {
                 { label: 'Room Type', value: hotelSnapshot?.roomName || '—' },
                 { label: 'Meal Plan', value: boardLabels[hotelSnapshot?.boardCode] || hotelSnapshot?.boardName || 'Room Only' },
                 { label: 'Guest Name', value: holderName || '—' },
-                { label: 'Total Paid', value: `₹${Math.ceil(totalPrice || 0).toLocaleString('en-IN')} INR` },
+                { label: 'Total Paid', value: `₹${Math.ceil(totalPriceINR || 0).toLocaleString('en-IN')} INR` },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between py-2 border-b border-black/5 last:border-0">
                   <span className="text-sm text-black/40 font-medium">{label}</span>
@@ -321,6 +339,12 @@ const HotelBookingSuccess = () => {
             className="flex items-center gap-2 px-6 py-3 border border-black/10 text-brand-black rounded-xl font-bold text-sm hover:bg-black/5 transition-colors">
             <Building2 size={16} />Search More Hotels
           </button>
+          {localBookingId && (
+            <button onClick={handleDownloadInvoice}
+              className="flex items-center gap-2 px-6 py-3 border border-brand-red text-brand-red rounded-xl font-bold text-sm hover:bg-brand-red/5 transition-colors">
+              <Download size={16} />Download Invoice
+            </button>
+          )}
           {!cancelled && liveStatus === 'CONFIRMED' && (
             <button onClick={() => setShowCancelConfirm(true)}
               className="flex items-center gap-2 px-6 py-3 border border-red-200 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors">
