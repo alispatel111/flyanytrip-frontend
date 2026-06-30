@@ -9,6 +9,14 @@ import TourHome from '../pages/TourHome';
 import SearchResults from '../pages/SearchResults';
 import TourDetails from '../pages/TourDetails';
 
+// Hotel Flow
+import HotelSearchResults from '../pages/HotelSearchResults';
+import HotelDetails from '../pages/HotelDetails';
+import HotelCheckout from '../pages/HotelCheckout';
+import HotelPayment from '../pages/HotelPayment';
+import HotelBookingSuccess from '../pages/HotelBookingSuccess';
+import HotelBookingFailed from '../pages/HotelBookingFailed';
+
 // Flight Flow
 import FlightDetails from '../pages/FlightDetails';
 import BookingReview from '../pages/BookingReview';
@@ -63,6 +71,14 @@ const AppRoutes = () => {
       <Route path="/flights/search" element={<SearchResults />} />
       <Route path="/flights/:route" element={<SearchResults />} />
       <Route path="/tours/:id" element={<TourDetails />} />
+
+      {/* Hotel Flow Routes */}
+      <Route path="/hotels/search" element={<HotelSearchResults />} />
+      <Route path="/hotels/:hotelId" element={<HotelDetails />} />
+      <Route path="/hotel-checkout" element={<HotelCheckout />} />
+      <Route path="/hotel-payment" element={<HotelPayment />} />
+      <Route path="/hotel-booking-success" element={<HotelBookingSuccess />} />
+      <Route path="/hotel-booking-failed" element={<HotelBookingFailed />} />
 
       {/* Flight Flow Routes */}
       <Route path="/flight-details" element={<FlightDetails />} />
