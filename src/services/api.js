@@ -12,4 +12,31 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use(
+  (config) => {
+    // Dispatch event to show global loader unless disabled for this request
+    if (config.hideLoader !== true) {
+      window.dispatchEvent(new CustomEvent('showLoader'));
+    }
+    return config;
+  },
+  (error) => {
+    window.dispatchEvent(new CustomEvent('hideLoader'));
+    return Promise.reject(error);
+  }
+);
+
+api.interceptors.response.use(
+  (response) => {
+    if (response.config.hideLoader !== true) {
+      window.dispatchEvent(new CustomEvent('hideLoader'));
+    }
+    return response;
+  },
+  (error) => {
+    window.dispatchEvent(new CustomEvent('hideLoader'));
+    return Promise.reject(error);
+  }
+);
+
 export default api;
