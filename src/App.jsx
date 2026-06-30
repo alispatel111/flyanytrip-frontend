@@ -6,9 +6,9 @@
  * and the main page layout (Navbar, page content, Footer).
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, useLocation } from 'react-router-dom';
 import Navbar from './layouts/Navbar';
 import Footer from './layouts/Footer';
 import AppRoutes from './routes/AppRoutes';
@@ -17,6 +17,16 @@ import {
   Plane, Compass, FileText, Activity, Train, ClipboardCheck,
   ShieldCheck, Headphones, Globe2
 } from 'lucide-react';
+
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
 
 /**
  * Inner layout component. Reads the active search tab from context
@@ -27,6 +37,7 @@ const AppContent = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <ScrollToTop />
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       <main>
         <AppRoutes />
