@@ -41,18 +41,18 @@ const STATIC_CONTENT = {
     destSub: "Stay in luxury across the globe",
     destinations: [
       { name: 'Maldives', price: '120,000', img: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?q=80&w=800&auto=format&fit=crop' },
-      { name: 'Paris', price: '45,500', img: 'https://images.unsplash.com/photo-1502602898657-3e907614d693?q=80&w=800&auto=format&fit=crop' },
+      { name: 'Paris', price: '45,500', img: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?q=80&w=800&auto=format&fit=crop' },
       { name: 'Swiss Alps', price: '85,000', img: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=800&auto=format&fit=crop' },
       { name: 'Bali Villas', price: '28,900', img: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=800&auto=format&fit=crop' },
-      { name: 'Santorini', price: '92,000', img: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac542?q=80&w=800&auto=format&fit=crop' }
+      { name: 'Santorini', price: '92,000', img: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=800&auto=format&fit=crop' }
     ],
     actTitle: "Featured Properties",
     actSub: "Handpicked premium hotels just for you",
     activities: [
       { name: 'Burj Al Arab', city: 'Dubai', price: '145,000', tag: '7-Star', img: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=800&auto=format&fit=crop' },
       { name: 'Marina Bay Sands', city: 'Singapore', price: '58,000', tag: 'Iconic', img: 'https://images.unsplash.com/photo-1561501900-3701fa6a0864?q=80&w=800&auto=format&fit=crop' },
-      { name: 'The Ritz', city: 'London', price: '72,000', tag: 'Heritage', img: 'https://images.unsplash.com/photo-1542314831-c6a4d1409e1c?q=80&w=800&auto=format&fit=crop' },
-      { name: 'Taj Mahal Palace', city: 'Mumbai', price: '25,000', tag: 'Royal', img: 'https://images.unsplash.com/photo-1566733282582-4161f385c54e?q=80&w=800&auto=format&fit=crop' }
+      { name: 'The Ritz', city: 'London', price: '72,000', tag: 'Heritage', img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=800&auto=format&fit=crop' },
+      { name: 'Taj Mahal Palace', city: 'Mumbai', price: '25,000', tag: 'Royal', img: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=800&auto=format&fit=crop' }
     ]
   },
   tours: {
@@ -121,8 +121,9 @@ const HomeContent = ({ activeTab, results, searching, setTo, setActiveTab }) => 
 
   return (
     <>
-      <section className="py-24 max-w-[1200px] mx-auto px-6">
+      <section key={activeTab} className="py-24 max-w-[1200px] mx-auto px-6">
         <motion.div
+          key={`dest-header-${activeTab}`}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
@@ -137,15 +138,16 @@ const HomeContent = ({ activeTab, results, searching, setTo, setActiveTab }) => 
         </motion.div>
 
         <motion.div
+          key={`dest-grid-${activeTab}`}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={containerVariants}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
         >
-          {currentTab.destinations.slice(0, 4).map((dest) => (
+          {currentTab.destinations.slice(0, 4).map((dest, idx) => (
             <motion.div
-              key={dest.city}
+              key={dest.city || dest.name || idx}
               variants={itemVariants}
               whileHover={{ y: -10 }}
               onClick={() => handleDestinationClick(dest)}
@@ -153,15 +155,17 @@ const HomeContent = ({ activeTab, results, searching, setTo, setActiveTab }) => 
             >
               <img
                 src={dest.img}
-                alt={dest.city}
+                alt={dest.city || dest.name || 'Destination'}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                 onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/f8f9fa/a8a29e?text=Image+Unavailable'; }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-70 group-hover:opacity-90 transition-opacity duration-500" />
               <div className="absolute bottom-0 left-0 p-8 w-full transition-transform duration-500 group-hover:-translate-y-1">
                 <div className="flex flex-col gap-1">
-                  <span className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em]">Popular Route</span>
-                  <h3 className="text-3xl font-black text-white mb-2 tracking-tighter">{dest.city}</h3>
+                  <span className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em]">
+                    {activeTab === 'hotels' ? 'Top Destination' : activeTab === 'tours' ? 'Tour Package' : 'Popular Route'}
+                  </span>
+                  <h3 className="text-3xl font-black text-white mb-2 tracking-tighter">{dest.city || dest.name}</h3>
                 </div>
                 <div className="flex justify-between items-center overflow-hidden">
                   <div className="flex flex-col">
@@ -182,6 +186,7 @@ const HomeContent = ({ activeTab, results, searching, setTo, setActiveTab }) => 
         </motion.div>
 
         <motion.div
+          key={`act-header-${activeTab}`}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
@@ -196,22 +201,23 @@ const HomeContent = ({ activeTab, results, searching, setTo, setActiveTab }) => 
         </motion.div>
 
         <motion.div
+          key={`act-grid-${activeTab}`}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={containerVariants}
-          className="grid grid-cols-4 gap-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
         >
-          {currentTab.activities.map((act) => (
+          {currentTab.activities.map((act, idx) => (
             <motion.div
-              key={act.name}
+              key={act.name || idx}
               variants={itemVariants}
               whileHover={{ scale: 1.02 }}
               className="relative h-[320px] rounded-[40px] overflow-hidden group cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-500 bg-white border border-black/5"
             >
               <img
                 src={act.img}
-                alt={act.name}
+                alt={act.name || 'Activity'}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                 onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/f8f9fa/a8a29e?text=Image+Unavailable'; }}
               />
@@ -389,31 +395,31 @@ const HomeContent = ({ activeTab, results, searching, setTo, setActiveTab }) => 
               transition={{ duration: 50, repeat: Infinity, ease: "linear", repeatType: "loop" }}
             >
               {[
-                { name: "AIR INDIA", logo: "https://www.logo.wine/a/logo/Air_India/Air_India-Logo.wine.svg" },
-                { name: "INDIGO", logo: "https://upload.wikimedia.org/wikipedia/commons/a/af/IndiGo_logo.svg" },
-                { name: "VISTARA", logo: "https://www.logo.wine/a/logo/Vistara/Vistara-Logo.wine.svg" },
-                { name: "AKASA AIR", logo: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Akasa_Air_Logo.svg" },
-                { name: "EMIRATES", logo: "https://www.logo.wine/a/logo/Emirates_(airline)/Emirates_(airline)-Logo.wine.svg" },
-                { name: "LUFTHANSA", logo: "https://www.logo.wine/a/logo/Lufthansa/Lufthansa-Logo.wine.svg" },
-                { name: "SINGAPORE AIRLINES", logo: "https://www.logo.wine/a/logo/Singapore_Airlines/Singapore_Airlines-Logo.wine.svg" },
-                { name: "UNITED", logo: "https://www.logo.wine/a/logo/United_Airlines/United_Airlines-Logo.wine.svg" },
-                { name: "SWISS", logo: "https://www.logo.wine/a/logo/Swiss_International_Air_Lines/Swiss_International_Air_Lines-Logo.wine.svg" },
-                { name: "THAI AIRWAYS", logo: "https://www.logo.wine/a/logo/Thai_Airways_International/Thai_Airways_International-Logo.wine.svg" },
-                { name: "TURKISH", logo: "https://www.logo.wine/a/logo/Turkish_Airlines/Turkish_Airlines-Logo.wine.svg" },
-                { name: "STAR ALLIANCE", logo: "https://www.logo.wine/a/logo/Star_Alliance/Star_Alliance-Logo.wine.svg" }
+                { name: "AIR INDIA", logo: "/assets/airlines/AI.png" },
+                { name: "INDIGO", logo: "/assets/airlines/6E.png" },
+                { name: "VISTARA", logo: "/assets/airlines/UK.png" },
+                { name: "AKASA AIR", logo: "/assets/airlines/QP.png" },
+                { name: "EMIRATES", logo: "/assets/airlines/EK.png" },
+                { name: "LUFTHANSA", logo: "/assets/airlines/LH.png" },
+                { name: "SINGAPORE AIRLINES", logo: "/assets/airlines/SQ.png" },
+                { name: "UNITED", logo: "/assets/airlines/UA.png" },
+                { name: "SWISS", logo: "/assets/airlines/LX.png" },
+                { name: "THAI AIRWAYS", logo: "/assets/airlines/TG.png" },
+                { name: "TURKISH", logo: "/assets/airlines/TK.png" },
+                { name: "ANA (STAR ALLIANCE)", logo: "/assets/airlines/NH.png" }
               ].concat([
-                { name: "AIR INDIA", logo: "https://www.logo.wine/a/logo/Air_India/Air_India-Logo.wine.svg" },
-                { name: "INDIGO", logo: "https://upload.wikimedia.org/wikipedia/commons/a/af/IndiGo_logo.svg" },
-                { name: "VISTARA", logo: "https://www.logo.wine/a/logo/Vistara/Vistara-Logo.wine.svg" },
-                { name: "AKASA AIR", logo: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Akasa_Air_Logo.svg" },
-                { name: "EMIRATES", logo: "https://www.logo.wine/a/logo/Emirates_(airline)/Emirates_(airline)-Logo.wine.svg" },
-                { name: "LUFTHANSA", logo: "https://www.logo.wine/a/logo/Lufthansa/Lufthansa-Logo.wine.svg" },
-                { name: "SINGAPORE AIRLINES", logo: "https://www.logo.wine/a/logo/Singapore_Airlines/Singapore_Airlines-Logo.wine.svg" },
-                { name: "UNITED", logo: "https://www.logo.wine/a/logo/United_Airlines/United_Airlines-Logo.wine.svg" },
-                { name: "SWISS", logo: "https://www.logo.wine/a/logo/Swiss_International_Air_Lines/Swiss_International_Air_Lines-Logo.wine.svg" },
-                { name: "THAI AIRWAYS", logo: "https://www.logo.wine/a/logo/Thai_Airways_International/Thai_Airways_International-Logo.wine.svg" },
-                { name: "TURKISH", logo: "https://www.logo.wine/a/logo/Turkish_Airlines/Turkish_Airlines-Logo.wine.svg" },
-                { name: "STAR ALLIANCE", logo: "https://www.logo.wine/a/logo/Star_Alliance/Star_Alliance-Logo.wine.svg" }
+                { name: "AIR INDIA", logo: "/assets/airlines/AI.png" },
+                { name: "INDIGO", logo: "/assets/airlines/6E.png" },
+                { name: "VISTARA", logo: "/assets/airlines/UK.png" },
+                { name: "AKASA AIR", logo: "/assets/airlines/QP.png" },
+                { name: "EMIRATES", logo: "/assets/airlines/EK.png" },
+                { name: "LUFTHANSA", logo: "/assets/airlines/LH.png" },
+                { name: "SINGAPORE AIRLINES", logo: "/assets/airlines/SQ.png" },
+                { name: "UNITED", logo: "/assets/airlines/UA.png" },
+                { name: "SWISS", logo: "/assets/airlines/LX.png" },
+                { name: "THAI AIRWAYS", logo: "/assets/airlines/TG.png" },
+                { name: "TURKISH", logo: "/assets/airlines/TK.png" },
+                { name: "ANA (STAR ALLIANCE)", logo: "/assets/airlines/NH.png" }
               ]).map((airline, i) => (
                 <div key={i} className="flex items-center gap-6 px-10 py-6 rounded-[32px] border border-black/5 bg-white shadow-sm hover:shadow-2xl hover:border-brand-red/20 transition-all cursor-pointer group grayscale opacity-40 hover:grayscale-0 hover:opacity-100 min-w-[340px]">
                   <img src={airline.logo} alt={airline.name} className="h-12 w-auto object-contain" onError={(e) => { e.target.style.display = 'none'; }} />

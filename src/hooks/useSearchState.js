@@ -326,7 +326,7 @@ export const useSearchState = () => {
       if (activeTab === 'tours') {
         const dest = tourDest || 'Thailand';
         mockResults = [
-          { id: 1, type: 'tour', name: `${dest} Quick Getaway`, duration: '3 Days / 2 Nights', price: '25,000', rating: 4.6, img: 'https://images.unsplash.com/photo-1590454316824-006f238290ab?q=80&w=1000&auto=format&fit=crop' },
+          { id: 1, type: 'tour', name: `${dest} Quick Getaway`, duration: '3 Days / 2 Nights', price: '25,000', rating: 4.6, img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop' },
           { id: 2, type: 'tour', name: `Classic ${dest} Experience`, duration: '5 Days / 4 Nights', price: '42,500', rating: 4.8, img: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=1000&auto=format&fit=crop' },
           { id: 3, type: 'tour', name: `Ultimate ${dest} Explorer`, duration: '8 Days / 7 Nights', price: '68,000', rating: 4.9, img: 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1000&auto=format&fit=crop' }
         ];

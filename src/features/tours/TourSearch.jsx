@@ -220,7 +220,7 @@ const TourSearch = ({
                       onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.12)'; }}
                     >
                       <img
-                        src={DEST_IMAGES[dest] || `https://source.unsplash.com/400x300/?${dest},travel`}
+                        src={DEST_IMAGES[dest] || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop'}
                         alt={dest}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/f8f9fa/a8a29e?text=' + encodeURIComponent(dest); }}
