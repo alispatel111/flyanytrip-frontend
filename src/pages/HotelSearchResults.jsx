@@ -77,24 +77,29 @@ const HotelSearchResults = () => {
         // Default to USD (not INR) so prices get properly converted.
         const detected = detectedFromResponse || detectedFromList || 'USD';
 
-        console.log('[Hotel Pricing Debug]', {
+        console.log('[Hotel Pricing Debug — Search Results]', {
+          step: '1. Currency detection',
           detectedFromResponse,
           detectedFromList,
           finalCurrency: detected,
+          sampleHotel: hotelList[0]?.Name,
           sampleLowRate: hotelList[0]?.LowRate,
-          sampleName: hotelList[0]?.Name,
-          fullResponse: res.data?.data,
+          note: 'LowRate = TOTAL stay price (all nights), NOT per-night',
+          nightCount,
+          sampleLowRateConverted: `${hotelList[0]?.LowRate} ${detected} × ${detected === 'EUR' ? 91 : detected === 'USD' ? 84 : 1} = ₹${toINR(parseFloat(hotelList[0]?.LowRate) || 0, detected)} TOTAL`,
+          samplePerNight: `₹${Math.ceil(toINR(parseFloat(hotelList[0]?.LowRate) || 0, detected) / nightCount)} per night`,
         });
 
         setApiCurrency(detected);
 
         // Set slider max to highest INR-converted price
+        // LowRate is total stay price — derive per-night for filter slider
         if (hotelList.length > 0) {
-          const prices = hotelList
-            .map(h => toINR(parseFloat(h.LowRate) || 0, detected))
+          const perNightPrices = hotelList
+            .map(h => Math.ceil(toINR(parseFloat(h.LowRate) || 0, detected) / nightCount))
             .filter(p => p > 0);
-          if (prices.length > 0) {
-            setMaxPriceINR(Math.ceil(Math.max(...prices)));
+          if (perNightPrices.length > 0) {
+            setMaxPriceINR(Math.ceil(Math.max(...perNightPrices)));
           }
         }
       } catch (err) {
@@ -108,21 +113,27 @@ const HotelSearchResults = () => {
   }, [destinationCode, countryCode, checkIn, checkOut, rooms, adults, children]);
 
   // INR prices for each hotel
-  const hotelsWithINR = hotels.map(h => ({
-    ...h,
-    _inrRate: toINR(parseFloat(h.LowRate) || 0, apiCurrency),
-    _starNum: parseInt(h.StarRating) || 0,
-  }));
+  // NOTE: LowRate from Hotelbeds API is the TOTAL STAY price, not per-night
+  const hotelsWithINR = hotels.map(h => {
+    const totalStayINR = toINR(parseFloat(h.LowRate) || 0, apiCurrency);
+    const perNightINR = Math.ceil(totalStayINR / nightCount);
+    return {
+      ...h,
+      _inrTotal: totalStayINR,    // total stay price in INR
+      _inrPerNight: perNightINR,  // per-night price in INR
+      _starNum: parseInt(h.StarRating) || 0,
+    };
+  });
 
-  const allINRPrices = hotelsWithINR.map(h => h._inrRate).filter(p => p > 0);
-  const minINR = allINRPrices.length > 0 ? Math.floor(Math.min(...allINRPrices)) : 0;
-  const maxINR = allINRPrices.length > 0 ? Math.ceil(Math.max(...allINRPrices)) : 100000;
+  const allPerNightPrices = hotelsWithINR.map(h => h._inrPerNight).filter(p => p > 0);
+  const minINR = allPerNightPrices.length > 0 ? Math.floor(Math.min(...allPerNightPrices)) : 0;
+  const maxINR = allPerNightPrices.length > 0 ? Math.ceil(Math.max(...allPerNightPrices)) : 100000;
   const sliderMax = maxPriceINR !== null ? Math.max(maxINR, maxPriceINR) : maxINR;
 
   const filtered = hotelsWithINR
     .filter((h) => {
       if (starFilter.length > 0 && !starFilter.includes(h._starNum)) return false;
-      if (maxPriceINR !== null && h._inrRate > maxPriceINR) return false;
+      if (maxPriceINR !== null && h._inrPerNight > maxPriceINR) return false;
       if (boardFilter) {
         const boardCode = h.RoomTypes?.[0]?.rates?.[0]?.boardCode || '';
         const boardName = h.boardName || '';
@@ -131,8 +142,8 @@ const HotelSearchResults = () => {
       return true;
     })
     .sort((a, b) => {
-      if (sortBy === 'price_asc') return a._inrRate - b._inrRate;
-      if (sortBy === 'price_desc') return b._inrRate - a._inrRate;
+      if (sortBy === 'price_asc') return a._inrPerNight - b._inrPerNight;
+      if (sortBy === 'price_desc') return b._inrPerNight - a._inrPerNight;
       if (sortBy === 'stars_desc') return b._starNum - a._starNum;
       return 0;
     });
@@ -393,8 +404,9 @@ const HotelSearchResults = () => {
             </div>
             <div className="space-y-4">
               {filtered.map((hotel, i) => {
-                const inrPerNight = hotel._inrRate;
-                const inrTotal = inrPerNight * nightCount;
+                // LowRate is already the TOTAL stay price — use derived values
+                const inrPerNight = hotel._inrPerNight;
+                const inrTotal = hotel._inrTotal;
                 const boardCode = hotel.RoomTypes?.[0]?.rates?.[0]?.boardCode || 'RO';
                 const board = hotel.boardName || boardLabels[boardCode] || 'Room Only';
 

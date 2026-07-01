@@ -100,13 +100,26 @@ const HotelDetails = () => {
     try {
       setCheckingRate(true);
       setSelectedRoomIdx(roomIdx);
+      // Scroll to top so loading overlay is fully visible
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
       const res = await api.post('/api/hotels/check-rates', { rateKey: rate.rateKey });
       const rateResponse = res.data?.data?.responseData?.RateResponse;
 
-      // Rate net is in the API's original currency — convert to INR for payment
+      // Rate net is in the API's original currency — it's the TOTAL stay price (all nights)
       const rawNet = parseFloat(rateResponse?.rooms?.[0]?.rates?.[0]?.net || rate.net || 0);
       const rateCurrencyFromResponse = rateResponse?.rooms?.[0]?.rates?.[0]?.currency || rate.currency || apiCurrency;
       const inrTotal = toINR(rawNet, rateCurrencyFromResponse);
+
+      console.log('[Hotel Pricing Debug — Room Selection]', {
+        step: '2. handleSelectRoom (Book Now click)',
+        rawNet,
+        rateCurrency: rateCurrencyFromResponse,
+        note: 'rate.net = TOTAL stay price (all nights), NOT per-night',
+        inrTotal,
+        nightCount,
+        inrPerNight: Math.ceil(inrTotal / nightCount),
+      });
 
       navigate('/hotel-checkout', {
         state: {
@@ -148,6 +161,48 @@ const HotelDetails = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* ── Full-page loading overlay during rate verification ── */}
+      <AnimatePresence>
+        {checkingRate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center gap-5"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+              className="w-16 h-16 rounded-2xl bg-brand-red/10 flex items-center justify-center"
+            >
+              <Loader2 size={32} className="text-brand-red" />
+            </motion.div>
+            <div className="text-center">
+              <p className="font-black text-brand-black text-lg">Verifying Room Rate</p>
+              <p className="text-sm text-black/40 font-medium mt-1">Confirming live pricing with the hotel...</p>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <motion.div
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
+                className="w-2 h-2 rounded-full bg-brand-red/60"
+              />
+              <motion.div
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+                className="w-2 h-2 rounded-full bg-brand-red/60"
+              />
+              <motion.div
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
+                className="w-2 h-2 rounded-full bg-brand-red/60"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Breadcrumb / Back ── */}
       <div className="bg-white border-b border-black/5">
         <div className="max-w-6xl mx-auto px-4 py-3">
@@ -385,10 +440,11 @@ const HotelDetails = () => {
                   {/* Rate rows */}
                   <div className="divide-y divide-black/5">
                     {(room.rates || []).map((rate, rateIdx) => {
+                      // rate.net from Hotelbeds = TOTAL stay price (all nights combined)
                       const rawNet = parseFloat(rate.net) || 0;
                       const rateCurrency = rate.currency || apiCurrency || 'INR';
-                      const inrNet = toINR(rawNet, rateCurrency);
-                      const inrTotal = inrNet * nightCount;
+                      const inrTotal = toINR(rawNet, rateCurrency);           // total stay in INR
+                      const inrPerNight = Math.ceil(inrTotal / nightCount);   // per-night in INR
                       const isSelected = selectedRoomIdx === roomIdx;
 
                       return (
@@ -422,7 +478,7 @@ const HotelDetails = () => {
                           <div className="flex items-center gap-4 shrink-0">
                             <div className="text-right">
                               <p className="text-xl font-black text-brand-black">
-                                ₹{inrNet.toLocaleString('en-IN')}
+                                ₹{inrPerNight.toLocaleString('en-IN')}
                               </p>
                               <p className="text-xs text-black/40">per night{rateCurrency !== 'INR' ? ` (${rateCurrency} converted)` : ''}</p>
                               {nightCount > 1 && (

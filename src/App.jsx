@@ -37,7 +37,6 @@ const AppContent = () => {
 };
 
 import { AuthProvider } from './context/AuthContext';
-import { LoadingProvider } from './context/LoadingContext';
 
 /**
  * Top-level App component.
@@ -47,13 +46,11 @@ import { LoadingProvider } from './context/LoadingContext';
 function App() {
   return (
     <Router>
-      <LoadingProvider>
-        <AuthProvider>
-          <SearchProvider>
-            <AppContent />
-          </SearchProvider>
-        </AuthProvider>
-      </LoadingProvider>
+      <AuthProvider>
+        <SearchProvider>
+          <AppContent />
+        </SearchProvider>
+      </AuthProvider>
     </Router>
   );
 }

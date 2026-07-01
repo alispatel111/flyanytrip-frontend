@@ -39,6 +39,17 @@ const HotelPayment = () => {
 
   const amountINR = Math.ceil(totalPriceINR || 0);
 
+  console.log('[Hotel Pricing Debug — Payment]', {
+    step: '4. HotelPayment final amount',
+    totalPriceINR,
+    amountINR,
+    note: 'amountINR = TOTAL stay price (all nights) sent to Razorpay',
+    nightCount: hotelSnapshot?.nightCount,
+    perNight: Math.ceil(amountINR / (hotelSnapshot?.nightCount || 1)),
+    rooms: hotelSnapshot?.rooms,
+    adults: hotelSnapshot?.adults,
+  });
+
   // ── Confirm booking with Adivaha after payment ──
   const confirmHotelBooking = async (paymentData) => {
     const payload = {
@@ -46,6 +57,7 @@ const HotelPayment = () => {
         name: holder.name,
         surname: holder.surname,
         email: holder.email,
+        phone: holder.phone,
       },
       rooms: [{
         rateKey,

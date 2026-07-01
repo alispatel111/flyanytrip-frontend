@@ -10,6 +10,29 @@ import { toINR } from '../utils/currency';
 
 const boardLabels = { BB: 'Bed & Breakfast', RO: 'Room Only', HB: 'Half Board', FB: 'Full Board', AI: 'All Inclusive' };
 
+/**
+ * Reusable form field — defined OUTSIDE the component to avoid losing focus.
+ * If this were inside HotelCheckout, every keystroke would re-create Field as a
+ * new component type, causing React to unmount/remount the <input> (focus lost).
+ */
+const Field = ({ label, field, placeholder, type = 'text', half, value, error, onChange }) => (
+  <div className={half ? 'flex-1 min-w-[160px]' : 'w-full'}>
+    <label className="block text-xs font-bold text-black/50 uppercase tracking-wider mb-1.5">{label}</label>
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(field, e.target.value)}
+      placeholder={placeholder}
+      className={`w-full border rounded-xl py-3 px-4 text-sm font-semibold text-brand-black placeholder:font-normal placeholder:text-black/30 focus:outline-none transition-all ${error ? 'border-red-400 focus:border-red-500 bg-red-50' : 'border-black/10 focus:border-brand-red focus:ring-2 focus:ring-brand-red/20 bg-white'}`}
+    />
+    {error && (
+      <p className="text-xs text-red-500 font-semibold mt-1 flex items-center gap-1">
+        <AlertCircle size={10} />{error}
+      </p>
+    )}
+  </div>
+);
+
 const HotelCheckout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -29,9 +52,21 @@ const HotelCheckout = () => {
   }
 
   // Determine INR price — use pre-converted value if passed, else convert now
+  // NOTE: rawNet / totalPriceINR is the TOTAL stay price (all nights), NOT per-night
   const bookingCurrency = passedCurrency || hotelSnapshot?.apiCurrency || 'INR';
   const rawNet = parseFloat(rateResponse?.totalNet || rateResponse?.rooms?.[0]?.rates?.[0]?.net || 0);
   const totalPriceINR = passedINR || toINR(rawNet, bookingCurrency);
+
+  console.log('[Hotel Pricing Debug — Checkout]', {
+    step: '3. HotelCheckout price calculation',
+    passedINR,
+    rawNet,
+    bookingCurrency,
+    note: 'totalPriceINR = TOTAL stay price (all nights)',
+    totalPriceINR,
+    nightCount: hotelSnapshot?.nightCount,
+    perNight: Math.ceil(totalPriceINR / (hotelSnapshot?.nightCount || 1)),
+  });
 
   const [form, setForm] = useState({
     holderName: '', holderSurname: '', holderEmail: '', holderPhone: '',
@@ -86,23 +121,6 @@ const HotelCheckout = () => {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
-  const Field = ({ label, field, placeholder, type = 'text', half }) => (
-    <div className={half ? 'flex-1 min-w-[160px]' : 'w-full'}>
-      <label className="block text-xs font-bold text-black/50 uppercase tracking-wider mb-1.5">{label}</label>
-      <input
-        type={type}
-        value={form[field]}
-        onChange={(e) => updateForm(field, e.target.value)}
-        placeholder={placeholder}
-        className={`w-full border rounded-xl py-3 px-4 text-sm font-semibold text-brand-black placeholder:font-normal placeholder:text-black/30 focus:outline-none transition-all ${formErrors[field] ? 'border-red-400 focus:border-red-500 bg-red-50' : 'border-black/10 focus:border-brand-red focus:ring-2 focus:ring-brand-red/20 bg-white'}`}
-      />
-      {formErrors[field] && (
-        <p className="text-xs text-red-500 font-semibold mt-1 flex items-center gap-1">
-          <AlertCircle size={10} />{formErrors[field]}
-        </p>
-      )}
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -129,10 +147,10 @@ const HotelCheckout = () => {
                 <span className="text-xs font-normal text-black/40 ml-1">(confirmation sent here)</span>
               </h2>
               <div className="flex flex-wrap gap-4">
-                <Field label="First Name" field="holderName" placeholder="e.g. Rahul" half />
-                <Field label="Last Name" field="holderSurname" placeholder="e.g. Sharma" half />
-                <Field label="Email Address" field="holderEmail" placeholder="email@example.com" type="email" />
-                <Field label="Phone Number (optional)" field="holderPhone" placeholder="+91 9876543210" type="tel" />
+                <Field label="First Name" field="holderName" placeholder="e.g. Rahul" half value={form.holderName} error={formErrors.holderName} onChange={updateForm} />
+                <Field label="Last Name" field="holderSurname" placeholder="e.g. Sharma" half value={form.holderSurname} error={formErrors.holderSurname} onChange={updateForm} />
+                <Field label="Email Address" field="holderEmail" placeholder="email@example.com" type="email" value={form.holderEmail} error={formErrors.holderEmail} onChange={updateForm} />
+                <Field label="Phone Number (optional)" field="holderPhone" placeholder="+91 9876543210" type="tel" value={form.holderPhone} error={formErrors.holderPhone} onChange={updateForm} />
               </div>
             </motion.div>
 
@@ -142,8 +160,8 @@ const HotelCheckout = () => {
                 <User size={18} className="text-brand-red" /> Primary Guest (Room 1)
               </h2>
               <div className="flex flex-wrap gap-4">
-                <Field label="Guest First Name" field="guestName" placeholder="e.g. Rahul" half />
-                <Field label="Guest Last Name" field="guestSurname" placeholder="e.g. Sharma" half />
+                <Field label="Guest First Name" field="guestName" placeholder="e.g. Rahul" half value={form.guestName} error={formErrors.guestName} onChange={updateForm} />
+                <Field label="Guest Last Name" field="guestSurname" placeholder="e.g. Sharma" half value={form.guestSurname} error={formErrors.guestSurname} onChange={updateForm} />
                 <div className="flex-1 min-w-[160px]">
                   <label className="block text-xs font-bold text-black/50 uppercase tracking-wider mb-1.5">Age</label>
                   <input
