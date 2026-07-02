@@ -272,6 +272,38 @@ const BookingSuccess = () => {
                     </div>
                  </div>
               </div>
+              {/* Cancellation & Refund Policy Card */}
+              <div className="bg-white rounded-[2.5rem] border border-black/5 shadow-xl shadow-black/5 overflow-hidden mt-6">
+                 <div className="p-6 bg-black/[0.02] border-b border-black/5 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-brand-black uppercase tracking-widest">Cancellation & Refund Policy</span>
+                    <span className="text-[9px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full tracking-wider uppercase">Refundable Flight</span>
+                 </div>
+                 <div className="p-8 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-brand-black/60 font-semibold leading-relaxed">
+                       <ul className="list-disc pl-4 space-y-2">
+                          <li><strong>Cancellation Penalty:</strong> Standard airline penalty starting from ₹3,000 applies per passenger depending on departure time.</li>
+                          <li><strong>Refund Process:</strong> Once initiated, refunds are processed directly back to your FlyAnyTrip wallet or original payment source within 5-7 working days.</li>
+                       </ul>
+                       <ul className="list-disc pl-4 space-y-2">
+                          <li><strong>Convenience Fee:</strong> Please note that any convenience fee paid at the time of booking is non-refundable.</li>
+                          <li><strong>How to Cancel:</strong> You can manage this booking anytime via your user dashboard or by visiting the <strong>Manage Booking</strong> section using your PNR.</li>
+                       </ul>
+                    </div>
+
+                    <div className="pt-6 border-t border-black/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                       <div>
+                          <h4 className="text-sm font-black text-brand-black mb-1">Need to cancel this booking?</h4>
+                          <p className="text-[10px] font-medium text-brand-black/40">You can check refund eligibility and cancel the flight instantly.</p>
+                       </div>
+                       <button 
+                          onClick={() => navigate('/manage-booking', { state: { searchPnr: pnr || booking?.bookingId || booking?.booking_id } })}
+                          className="px-6 h-12 bg-red-50 text-brand-red border border-brand-red/10 hover:bg-brand-red hover:text-white rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 transition-all active:scale-95 shrink-0"
+                       >
+                          Cancel Booking Instantly
+                       </button>
+                    </div>
+                 </div>
+              </div>
            </div>
 
            {/* Right Column: Contact & Fare */}

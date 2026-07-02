@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plane, Compass, FileText, Building2,
   ShieldCheck, Headphones, Globe2
@@ -43,6 +44,7 @@ const features = [
 const Home = () => {
   const searchState = useSearchContext();
   const { activeTab, setActiveTab, results, searching, searchError, setSearchError } = searchState;
+  const navigate = useNavigate();
   
   const ActiveComponent = tabs.find(t => t.id === activeTab)?.Component;
 
@@ -67,7 +69,10 @@ const Home = () => {
                       return;
                     }
                     setActiveTab(item.id); 
-                    setSearchError(''); 
+                    setSearchError('');
+                    // Navigate to the corresponding route so content updates
+                    const routeMap = { flights: '/flights', hotels: '/hotels', tours: '/tours' };
+                    navigate(routeMap[item.id] || '/');
                   }}
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ${activeTab === item.id ? 'bg-brand-red/10 scale-110' : 'bg-transparent group-hover:bg-black/5 group-hover:scale-105'}`}>

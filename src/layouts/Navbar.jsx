@@ -460,6 +460,9 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                           return;
                         }
                         setActiveTab(tab.id);
+                        // Navigate to the corresponding route so the page content updates
+                        const routeMap = { flights: '/flights', hotels: '/hotels', tours: '/tours' };
+                        navigate(routeMap[tab.id] || '/');
                       }}
                     >
                       <tab.icon size={18} className={`transition-transform duration-500 ${activeTab === tab.id ? 'scale-110' : 'group-hover:scale-110 opacity-50 group-hover:opacity-100'}`} />

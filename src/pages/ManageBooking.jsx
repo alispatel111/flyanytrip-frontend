@@ -1,16 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plane, Clock, User, CheckCircle, ChevronRight, FileText, PhoneCall, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 
 const ManageBooking = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchType, setSearchType] = useState('search'); // 'search' or 'history'
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [booking, setBooking] = useState(null);
+
+  // Cancellation States
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelCharges, setCancelCharges] = useState(null);
+  const [cancelRemarks, setCancelRemarks] = useState('');
+  const [cancelError, setCancelError] = useState('');
+  const [cancelSuccess, setCancelSuccess] = useState('');
+
+  useEffect(() => {
+    if (location.state?.searchPnr) {
+      setQuery(location.state.searchPnr);
+      const autoSearch = async () => {
+        setLoading(true);
+        setError('');
+        setBooking(null);
+        try {
+          const res = await api.get(`/api/booking/details/${location.state.searchPnr}`);
+          if (res.data.success) {
+            setBooking(res.data.data);
+          }
+        } catch (err) {
+          setError(err.response?.data?.message || 'Booking not found.');
+        } finally {
+          setLoading(false);
+        }
+      };
+      autoSearch();
+    }
+  }, [location.state]);
 
   const handleSearch = async () => {
     if (!query) return;
@@ -26,6 +57,52 @@ const ManageBooking = () => {
       setError(err.response?.data?.message || 'Booking not found. Please check your PNR/ID.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCancellationCharges = async (bookingId) => {
+    setCancelLoading(true);
+    setCancelError('');
+    setCancelCharges(null);
+    try {
+      const res = await api.post('/api/booking/cancel-charges', { bookingId });
+      if (res.data.success) {
+        setCancelCharges(res.data.data);
+      } else {
+        setCancelError(res.data.message || 'Failed to fetch cancellation charges.');
+      }
+    } catch (err) {
+      setCancelError(err.response?.data?.message || 'Error communicating with cancellation service.');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  const submitCancellation = async () => {
+    if (!booking) return;
+    setCancelLoading(true);
+    setCancelError('');
+    try {
+      // Extract charges from the state (populated by fetchCancellationCharges step)
+      const resObj = cancelCharges?.Response || cancelCharges || {};
+      const cancellationCharge = Number(resObj.CancellationCharge ?? 0);
+      const refundAmount = Number(resObj.RefundAmount ?? 0);
+
+      const res = await api.post('/api/booking/cancel-request', {
+        bookingId: booking.booking_id,
+        remarks: cancelRemarks,
+        cancellationCharge,
+        refundAmount,
+      });
+      if (res.data.success) {
+        setCancelSuccess(res.data.message || 'Cancellation request submitted successfully.');
+      } else {
+        setCancelError(res.data.message || 'Failed to submit cancellation request.');
+      }
+    } catch (err) {
+      setCancelError(err.response?.data?.message || 'Error processing cancellation.');
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -103,8 +180,14 @@ const ManageBooking = () => {
                           <div className="text-[10px] font-black text-brand-black/30 uppercase tracking-widest mb-1">Current Booking</div>
                           <h2 className="text-3xl font-black text-brand-black tracking-tight">{booking.pnr || booking.booking_id}</h2>
                        </div>
-                       <div className="flex items-center gap-2 bg-green-50 text-green-600 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest">
-                          <CheckCircle size={14} /> Confirmed
+                       <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest ${
+                           booking.status === 'CANCELLED' 
+                              ? 'bg-red-50 text-red-600 border border-red-100' 
+                              : booking.status === 'CANCEL_REQUESTED'
+                              ? 'bg-amber-50 text-amber-600 border border-amber-100 animate-pulse'
+                              : 'bg-green-50 text-green-600 border border-green-100'
+                        }`}>
+                          <CheckCircle size={14} /> {booking.status || 'Confirmed'}
                        </div>
                     </div>
 
@@ -129,10 +212,34 @@ const ManageBooking = () => {
                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       <button className="flex items-center justify-center gap-3 bg-brand-black text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-red transition-all shadow-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                       <button 
+                          onClick={() => window.open(`${api.defaults.baseURL || ''}/api/booking/invoice/${booking.booking_id}/download`)}
+                          disabled={booking.status === 'CANCELLED'}
+                          className="flex items-center justify-center gap-3 bg-brand-black text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-red transition-all shadow-lg disabled:opacity-50 disabled:pointer-events-none"
+                       >
                           <FileText size={16} /> Download Ticket
                        </button>
+
+                       {booking.status !== 'CANCELLED' && booking.status !== 'CANCEL_REQUESTED' ? (
+                          <button 
+                             onClick={() => {
+                                setShowCancelModal(true);
+                                fetchCancellationCharges(booking.booking_id);
+                             }}
+                             className="flex items-center justify-center gap-3 bg-red-50 text-brand-red border border-brand-red/10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-red hover:text-white transition-all shadow-sm"
+                          >
+                             <AlertCircle size={16} /> Cancel Booking
+                          </button>
+                       ) : (
+                          <button 
+                             disabled
+                             className="flex items-center justify-center gap-3 bg-black/[0.03] text-brand-black/30 border border-black/5 py-4 rounded-2xl font-black uppercase tracking-widest text-xs cursor-not-allowed"
+                          >
+                             <AlertCircle size={16} /> {booking.status === 'CANCELLED' ? 'Cancelled' : 'Cancel Requested'}
+                          </button>
+                       )}
+
                        <button className="flex items-center justify-center gap-3 bg-white text-brand-black border border-black/10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black/[0.02] transition-all shadow-sm">
                           <PhoneCall size={16} /> Contact Support
                        </button>
@@ -192,6 +299,138 @@ const ManageBooking = () => {
         </div>
 
       </div>
+
+      {/* Cancellation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              if (!cancelLoading) {
+                setShowCancelModal(false);
+                setCancelCharges(null);
+                setCancelRemarks('');
+                setCancelError('');
+                setCancelSuccess('');
+              }
+            }}
+          />
+          
+          {/* Modal Container */}
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-[32px] p-8 w-full max-w-[500px] border border-black/5 shadow-2xl relative z-10 overflow-hidden text-left"
+          >
+             <h3 className="text-2xl font-black text-brand-black tracking-tight mb-2">Cancel Flight Booking</h3>
+             <p className="text-sm font-semibold text-brand-black/40 mb-6">
+                Are you sure you want to cancel this booking? Let's check the cancellation policy and charges.
+             </p>
+
+             {cancelLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                   <Clock className="animate-spin text-brand-red mb-4" size={36} />
+                   <p className="text-sm font-black text-brand-black">Processing request...</p>
+                   <p className="text-xs text-brand-black/40 mt-1">Contacting Adivaha API and Airline servers</p>
+                </div>
+             ) : (
+                <div>
+                   {cancelError && (
+                      <div className="p-4 mb-6 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 font-bold text-xs">
+                         <AlertCircle size={16} /> {cancelError}
+                      </div>
+                   )}
+
+                   {cancelSuccess ? (
+                      <div className="text-center py-6">
+                         <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 font-black">
+                            ✓
+                         </div>
+                         <h4 className="text-lg font-black text-brand-black mb-1">Request Submitted</h4>
+                         <p className="text-xs text-brand-black/40 font-semibold mb-6">{cancelSuccess}</p>
+                         <button 
+                            onClick={() => {
+                               setShowCancelModal(false);
+                               setCancelCharges(null);
+                               setCancelRemarks('');
+                               setCancelError('');
+                               setCancelSuccess('');
+                               handleSearch(); // Refresh booking details
+                            }}
+                            className="w-full bg-brand-black text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-red transition-all"
+                         >
+                            Close
+                         </button>
+                      </div>
+                   ) : (
+                      <>
+                         {cancelCharges && (() => {
+                             const resObj = cancelCharges.responseData?.Response || cancelCharges.Response || cancelCharges;
+                             return (
+                                <div className="bg-black/[0.02] border border-black/5 rounded-2xl p-6 mb-6">
+                                   <div className="flex justify-between items-center mb-3">
+                                      <span className="text-xs font-bold text-brand-black/40">Status:</span>
+                                      <span className="text-xs font-black text-green-600 bg-green-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                         {resObj.Status || (resObj.ResponseStatus === 1 ? 'Allowed' : 'Pending')}
+                                      </span>
+                                    </div>
+                                   <div className="flex justify-between items-center mb-3">
+                                      <span className="text-xs font-bold text-brand-black/40">Cancellation Charge (Penalty):</span>
+                                      <span className="text-sm font-black text-brand-black">
+                                         ₹{Number(resObj.CancellationCharge ?? 0).toLocaleString('en-IN')}
+                                      </span>
+                                   </div>
+                                   <div className="w-full h-[1px] bg-black/5 my-3" />
+                                   <div className="flex justify-between items-center">
+                                      <span className="text-xs font-bold text-brand-black/40">Estimated Refund Amount:</span>
+                                      <span className="text-lg font-black text-brand-red">
+                                         ₹{Number(resObj.RefundAmount ?? 0).toLocaleString('en-IN')}
+                                      </span>
+                                   </div>
+                                </div>
+                             );
+                          })()}
+
+                         <div className="mb-6">
+                            <label className="block text-[10px] font-black text-brand-black/30 uppercase tracking-widest mb-2">
+                               Reason for Cancellation
+                            </label>
+                            <textarea 
+                               value={cancelRemarks}
+                               onChange={(e) => setCancelRemarks(e.target.value)}
+                               placeholder="e.g. Health issues, change of travel plans..."
+                               className="w-full bg-black/[0.02] border border-black/5 rounded-xl p-4 font-bold text-sm focus:outline-none focus:border-brand-red focus:bg-white transition-all placeholder:text-brand-black/20"
+                               rows={3}
+                            />
+                         </div>
+
+                         <div className="grid grid-cols-2 gap-4">
+                            <button 
+                               onClick={() => {
+                                  setShowCancelModal(false);
+                                  setCancelCharges(null);
+                                  setCancelRemarks('');
+                                  setCancelError('');
+                               }}
+                               className="bg-white text-brand-black border border-black/10 py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-black/[0.02] transition-all"
+                            >
+                               Keep Booking
+                            </button>
+                            <button 
+                               onClick={submitCancellation}
+                               className="bg-brand-red text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-brand-black transition-all shadow-lg shadow-brand-red/10 flex items-center justify-center gap-2"
+                            >
+                               Confirm Cancel
+                            </button>
+                         </div>
+                      </>
+                   )}
+                </div>
+             )}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
